@@ -1,0 +1,5 @@
+2021-11-09:
+Started coursework
+changing the resolution breaks the code. We're stuck on a small screen.
+
+

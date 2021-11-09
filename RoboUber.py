@@ -221,7 +221,8 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
             threadRunTime = 0
         else:
             svcArea.runWorld(ticks=1, outputs=outputValues)
-            # print("Times: {0}, Fares: {1}, Taxis: {2}".format(outputValues['time'], outputValues['fares'].keys(), outputValues['taxis'].keys()))
+            print("Times: {0}, Fares: {1}, Taxis: {2}".format(
+                outputValues['time'], outputValues['fares'].keys(), outputValues['taxis'].keys()))
             if threadTime != svcArea.simTime:
                 threadTime += 1
             time.sleep(1)
