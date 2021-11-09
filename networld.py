@@ -92,7 +92,7 @@ class Fare:
             self._origin, self._destination)
         if (expectedTime2Dest < 0) or (self._price > 10*expectedTime2Dest):
             print("Fare ({0},{1}) abandoned because expectedTime2Dest was {2} and price was {3}".format(
-                self.origin[0], self.origin[1], expectedTime2Dest, self._price))
+                self.origin[0], self.origin[1], expectedTime2Dest, round(self._price, 2)))
             self._waitTime = 0
 
     # clear gets rid of any references to objects so that garbage collection can
@@ -981,8 +981,8 @@ class NetWorld:
             outputs = {}
         ticksRun = 0
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
-            print(
-                "Current time in the simulation world: {0}".format(self._time))
+            # print(
+            #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
                 outputs['time'].append(self._time)
             # really simple recording of fares: just where there are fares still waiting. More

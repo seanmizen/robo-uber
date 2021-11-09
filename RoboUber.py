@@ -221,11 +221,12 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
             threadRunTime = 0
         else:
             svcArea.runWorld(ticks=1, outputs=outputValues)
-            print("Times: {0}, Fares: {1}, Taxis: {2}".format(
-                outputValues['time'], outputValues['fares'].keys(), outputValues['taxis'].keys()))
+            if (outputValues['time'][-1] % 5 == 0):
+                print("Time: {0}, Fares: {1}, Taxis: {2}".format(
+                    outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
             if threadTime != svcArea.simTime:
                 threadTime += 1
-            time.sleep(1)
+            time.sleep(0.05)  # !! was 1
 
 
 # event to manage a user exit, invoked by pressing 'q' on the keyboard
@@ -344,8 +345,8 @@ while curTime < runTime:
     except StopIteration:
         pygame.event.get()
         if 'time' in outputValues and len(outputValues['time']) > 0 and curTime != outputValues['time'][-1]:
-            print("curTime: {0}, world.time: {1}".format(
-                curTime, outputValues['time'][-1]))
+            # print("curTime: {0}, world.time: {1}".format(
+            #    curTime, outputValues['time'][-1]))
 
             # naive: redraw the entire map each time step. This could be improved by saving a list of squares
             # to redraw and being incremental, but there is a fair amount of bookkeeping involved.

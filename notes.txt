@@ -2,4 +2,11 @@
 Started coursework
 changing the resolution breaks the code. We're stuck on a small screen.
 
+TODO:
+    -Perform iterative deepening search in taxi.py
+    -
+    -
+    -
 
+ -Go back and complete the CSP coursework (week 3)
+ -Improve _costFare (dispatcher.py)
