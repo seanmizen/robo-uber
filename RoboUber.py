@@ -476,7 +476,7 @@ while curTime < runTime:
             addLabel("Fares cancelled: ", "{0}".format(
                 outputValues['cancelledFares']))
             addLabel("Dispatch revenue: ", "£{0}".format(
-                outputValues['dispatcherRevenue']))
+                round(outputValues['dispatcherRevenue'], 2)))
             addLabel()
             addLabel("Map Details:")
             addLabel("Streets: ", "{0}".format(
