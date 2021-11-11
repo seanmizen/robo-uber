@@ -169,6 +169,8 @@ class Taxi:
             if self._account <= 0:
                 self._account = self._dailyLoss
             self.onDuty = True
+            print(
+                "Taxi {0} is coming on-duty".format(self.number))
             onDutyPose = self._world.addTaxi(self, self._onDutyPos)
             self._nextLoc = onDutyPose[0]
             self._nextDirection = onDutyPose[1]
@@ -181,7 +183,8 @@ class Taxi:
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
         if self._account <= 0 and self._passenger is None:
-            print("Taxi {0} is going off-duty".format(self.number))
+            print(
+                "Loss too high. Taxi {0} is going off-duty".format(self.number))
             self.onDuty = False
             self._offDutyTime = self._world.simTime
         # have we reached our last known destination? Decide what to do now.
@@ -337,7 +340,11 @@ class Taxi:
         # the list of explored paths. Recursive invocations pass in explored as a parameter
 
         if False:
-            return _planPath_original(origin, destination, args)
+            return self._planPath_original(origin, destination, args)
+        if False:
+            return self._iterativeDeepeningSearch(origin, destination, **args)
+        if False:
+            return self._depthFirstSearch(20, origin, destination, args)
 
         if 'explored' not in args:
             args['explored'] = {}
@@ -360,6 +367,51 @@ class Taxi:
                                    explored=args['explored'])
                 # stop early as soon as the destination has been found by any route.
                 if destination in path:
+                    return path
+        # didn't reach the destination from any reachable node
+        # no need, therefore, to expand the path for the higher-level call, this is a dead end.
+        return []
+
+    def _iterativeDeepeningSearch(self, origin, destination, **args):
+        # probabilistic depth-first search discounting traffic, etc
+        args['explored'] = {}
+        args['explored'][origin] = None
+
+        path = [origin]
+        maxPly = 50
+        ply = 1
+        while ply <= maxPly and destination not in path:
+            path = self._depthFirstSearch(ply, origin, destination, **args)
+            ply += 1
+
+        print("Taxi {0}: path from ({1},{2}): {3}".format(
+            self.number, origin[0], origin[1], len(path)))
+        return path
+
+    def _depthFirstSearch(self, ply, origin, destination, **args):
+        # print("searching for ({0},{1}), ply {2}".format(
+        #    destination[0], destination[1], ply))
+        # adapted from _planPath_original
+        if 'explored' not in args:
+            args['explored'] = {}
+        args['explored'][origin] = None
+
+        path = [origin]
+        if origin in self._map and ply > 0:
+            # the frontier of unexplored paths (from this Node)
+            frontier = [node for node in self._map[origin].keys()
+                        if node not in args['explored']]
+            # recurse down to the next node. This will automatically create a depth-first
+            # approach because the recursion won't bottom out until no more frontier nodes
+            # can be generated
+            for nextNode in frontier:
+                path = path + \
+                    self._depthFirstSearch(ply - 1, nextNode, destination,
+                                           explored=args['explored'])
+                # stop early as soon as the destination has been found by any route.
+                if destination in path:
+                    print("Taxi {0}: path found to ({1},{2}) found. {4} steps.".format(
+                        self.number, destination[0], destination[1], ply))
                     return path
         # didn't reach the destination from any reachable node
         # no need, therefore, to expand the path for the higher-level call, this is a dead end.

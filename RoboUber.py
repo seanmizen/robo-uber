@@ -484,13 +484,13 @@ while curTime < runTime:
             addLabel("Junctions: ", "{0}".format(
                 len(junctionIdxs)), whiteText, whiteText)
 
-            linesDrawn = 0
+            labelsDrawn = 0
             for label in labels:
                 displayedTextArea.blit(
-                    label[0], (10, 10 + (lineSpacing * linesDrawn)))
+                    label[0], (10, 10 + (lineSpacing * labelsDrawn)))
                 displayedTextArea.blit(
-                    label[1], (dataLabelXOffset, 10 + (lineSpacing * linesDrawn)))
-                linesDrawn += 1
+                    label[1], (dataLabelXOffset, 10 + (lineSpacing * labelsDrawn)))
+                labelsDrawn += 1
 
             #  redraw the whole map
             displaySurface.blit(displayedBackground, activeRect)
