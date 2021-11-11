@@ -506,6 +506,10 @@ class NetWorld:
         self._taxis = {}
         # this is a dict indexed by origin of the active fares waiting for collection
         self._fareQ = {}
+        # New: debug variables to be passed into outputs {}
+        self._cancelledFares = 0
+        self._completedFares = 0
+        self._dispatcherRevenue = 0
         # the dispatcher (there can only be one) handles allocation of fares to taxis
         self._dispatcher = None
         if jctNodes is not None:
@@ -901,6 +905,7 @@ class NetWorld:
 
     def removeFare(self, fare):
         # if the fare wasn't collected, inform the dispatcher that they abandoned
+        self._cancelledFares += 1
         if not fare.enroute:
             if self._dispatcher is not None:
                 self._dispatcher.cancelFare(self,
@@ -961,6 +966,21 @@ class NetWorld:
     def completeFare(self, fare):
         self._dispatcher.recvPayment(self, fare.price*0.1)
         fare.taxi.recvMsg(fare.taxi.FARE_PAY, **{'amount': fare.price*0.9})
+        print("Fare ({0},{1}) completed. Fare payout: {2}".format(
+            fare.origin[0], fare.origin[1], fare.price))
+        # TODO find out and print more fare info? This is pretty crucial.
+        self._completedFares += 1
+        self._dispatcherRevenue += fare.price*0.1
+
+        #self._parent = parent
+        #self._origin = origin
+        #self._destination = destination
+        #self._callTime = call_time
+        #self._waitTime = wait_time
+        #self._taxi = None
+        #self._enroute = False
+        #self._price = 0
+
         # get rid of the fare's taxi allocation so that garbage collection doesn't have to worry
         # about back pointers. The taxi itself should already have got rid of the fare in the
         # completeFare call.
@@ -981,6 +1001,9 @@ class NetWorld:
             outputs = {}
         ticksRun = 0
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
+            outputs['cancelledFares'] = self._cancelledFares
+            outputs['completedFares'] = self._completedFares
+            outputs['dispatcherRevenue'] = self._dispatcherRevenue
             # print(
             #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:

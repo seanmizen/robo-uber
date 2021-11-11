@@ -7,6 +7,9 @@ import numpy
 import networld
 import taxi
 import dispatcher
+import time
+import datetime
+import json
 
 # import matplotlib
 # Note: plt.savefig('foo.png', bbox_inches='tight')
@@ -21,7 +24,10 @@ import dispatcher
 worldX = 50
 worldY = 50
 runTime = 1440
-# you can change the DisplaySize to be bigger if you want larger-size objects on-screen
+# displayedTextArea will use displaySize[1] for height - only specify a width here
+displayedTextAreaWidth = 400
+boldFontSize = 16
+normalFontSize = 15
 displaySize = (1024, 768)
 trafficOn = False
 
@@ -167,7 +173,8 @@ streets = [strt0, strt1, strt2, strt3, strt4, strt5, strt6, strt7, strt8, strt9,
            strt32, strt33, strt34, strt35, strt36, strt37, strt38, strt39, strt40, strt41, strt42, strt43, strt44, strt45, strt46, strt47]
 
 # create the dict of things we want to record
-outputValues = {'time': [], 'fares': {}, 'taxis': {}}
+outputValues = {'time': [], 'fares': {}, 'taxis': {},
+                'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0}
 
 # RoboUber itself will be run as a separate thread for performance, so that screen
 # redraws aren't interfering with model updates.
@@ -215,15 +222,23 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
     threadTime = 0
     print("Starting world")
     while threadTime < threadRunTime:
+        # cheeky debug info area:
+        # live fare dictionary: svcArea._dispatcher._fareBoard
+        # all fares ever: outputValues['fares']
+        # print("fares: " + str(len(outputValues['fares'])))
+
+        # if threadTime == 50:
+        #    print(json.dumps(dict((str(k), v)
+        #                          for k, v in outputValues['fares'].items()), indent=2))
 
         # exit if 'q' has been pressed
         if stop.is_set():
             threadRunTime = 0
         else:
             svcArea.runWorld(ticks=1, outputs=outputValues)
-            if (outputValues['time'][-1] % 5 == 0):
-                print("Time: {0}, Fares: {1}, Taxis: {2}".format(
-                    outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
+            # if (outputValues['time'][-1] % 5 == 0):
+            #    print("Time: {0}, Fares: {1}, Taxis: {2}".format(
+            #        outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
             if threadTime != svcArea.simTime:
                 threadTime += 1
             time.sleep(0.05)  # !! was 1
@@ -248,18 +263,35 @@ roboUber = threading.Thread(target=runRoboUber,
                                     'fareProbNormal': fareProbNormal})
 
 pygame.init()
+
+# New:
+# initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
+boldFont = pygame.font.Font("./Fonts/SourceCodePro-Bold.ttf", boldFontSize)
+normalFont = pygame.font.Font(
+    "./Fonts/SourceCodePro-SemiBold.ttf", boldFontSize)
+# boldFont.bold = True
+
 # |pygame.SCALED arrgh...new in pygame 2.0, but pip install installs 1.9.6 on Ubuntu 16.04 LTS
 displaySurface = pygame.display.set_mode(
-    size=displaySize, flags=pygame.RESIZABLE)
+    size=(displaySize[0] + displayedTextAreaWidth, displaySize[1]), flags=pygame.RESIZABLE)
 backgroundRect = None
 aspectRatio = worldX/worldY
 if aspectRatio > 4/3:
     activeSize = (displaySize[0]-100, (displaySize[0]-100)/aspectRatio)
 else:
+    # activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
     activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
+# new: text area on the left of the screen
+
+displayedTextArea = pygame.Surface(
+    (displayedTextAreaWidth, displaySize[1] - 100))
+displayedTextArea.fill(pygame.Color(33, 33, 33))
 displayedBackground = pygame.Surface(activeSize)
-displayedBackground.fill(pygame.Color(255, 255, 255))
-activeRect = pygame.Rect(round((displaySize[0]-activeSize[0])/2), round(
+displayedBackground.fill(pygame.Color(210, 210, 210))
+# activeRect = pygame.Rect(X position, not size. hmm., round(
+textRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2), round(
+    (displaySize[1]-activeSize[1])/2), displayedTextAreaWidth, activeSize[1])
+activeRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2) + displayedTextAreaWidth, round(
     (displaySize[1]-activeSize[1])/2), activeSize[0], activeSize[1])
 
 meshSize = ((activeSize[0]/worldX), round(activeSize[1]/worldY))
@@ -300,6 +332,7 @@ for jct in range(len(junctionIdxs)):
 
 # redraw the entire image
 displaySurface.blit(displayedBackground, activeRect)
+displaySurface.blit(displayedTextArea, textRect)
 pygame.display.flip()
 
 # which taxi is associated with which colour
@@ -411,9 +444,63 @@ while curTime < runTime:
                                           meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4),
                                          (meshSize[0]/2+math.cos(math.pi/6)*meshSize[1]/4, meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4)])
 
-            # redraw the whole map
+            # new: render text onto the screen.
+            # Debug and useful info will be printed onto the screen each update.
+            displayedTextArea.fill(pygame.Color(40, 40, 40))
+
+            whiteText = (210, 210, 210)
+            redText = (210, 50, 30)
+            greenText = (50, 210, 30)
+            lineSpacing = boldFontSize + 1
+            dataLabelXOffset = 185
+            labels = []
+
+            def addLabel(label="", datum="", labelColor=whiteText, datumColor=greenText):
+                # doesn't need to be a function, but it will enforce line spacings :)
+                labelImg = boldFont.render(label, 1, labelColor)
+                datumImg = normalFont.render(datum, 1, datumColor)
+                labels.append((labelImg, datumImg))
+                return None
+
+            ts = time.time()
+            dateStamp = datetime.datetime.fromtimestamp(
+                ts).strftime('%Y-%m-%d %H:%M:%S')
+
+            addLabel("RoboUber")
+            addLabel("IRL time: ", "{0}".format(dateStamp))
+            addLabel("Game time: ", "{0}".format(curTime))
+            addLabel("Taxis on duty: ", "{0}".format(len(taxisToRedraw)))
+            addLabel("Fares to pickup: ", "{0}".format(len(faresToRedraw)))
+            addLabel("Fares completed: ", "{0}".format(
+                outputValues['completedFares']))
+            addLabel("Fares cancelled: ", "{0}".format(
+                outputValues['cancelledFares']))
+            addLabel("Dispatch revenue: ", "£{0}".format(
+                outputValues['dispatcherRevenue']))
+            addLabel()
+            addLabel("Map Details:")
+            addLabel("Streets: ", "{0}".format(
+                len(streets)), whiteText, whiteText)
+            addLabel("Junctions: ", "{0}".format(
+                len(junctionIdxs)), whiteText, whiteText)
+
+            linesDrawn = 0
+            for label in labels:
+                displayedTextArea.blit(
+                    label[0], (10, 10 + (lineSpacing * linesDrawn)))
+                displayedTextArea.blit(
+                    label[1], (dataLabelXOffset, 10 + (lineSpacing * linesDrawn)))
+                linesDrawn += 1
+
+            #  redraw the whole map
             displaySurface.blit(displayedBackground, activeRect)
+            displaySurface.blit(displayedTextArea, textRect)
             pygame.display.flip()
+
+            # reactivate to save images. Will need fiddling with in Linux.
+            if curTime % 10 == 0 and False:
+                pygame.image.save(displaySurface,
+                                  "D:\Temp\img\{0}.png".format(str(curTime)))
 
             # advance the time
             curTime += 1

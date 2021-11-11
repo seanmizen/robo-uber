@@ -173,7 +173,7 @@ class Taxi:
             self._nextLoc = onDutyPose[0]
             self._nextDirection = onDutyPose[1]
 
-    # clockTick should handle all the non-driving behaviour, turn selection, stopping, etc. Drive automatically
+    # c1 lockTick should handle all the non-driving behaviour, turn selection, stopping, etc. Drive automatically
     # stops once it reaches its next location so that if continuing on is desired, clockTick has to select
     # that action explicitly. This can be done using the turn and continueThrough methods of the node. Taxis
     # can collect fares using pickupFare, drop them off using dropoffFare, bid for fares issued by the Dispatcher
@@ -335,6 +335,38 @@ class Taxi:
     # to do much better than this!
     def _planPath(self, origin, destination, **args):
         # the list of explored paths. Recursive invocations pass in explored as a parameter
+
+        if False:
+            return _planPath_original(origin, destination, args)
+
+        if 'explored' not in args:
+            args['explored'] = {}
+        # add this origin to the explored list
+        # explored is a dict purely so we can hash its index for fast lookup, so its value doesn't matter
+        args['explored'][origin] = None
+        # the actual path we are going to generate
+        path = [origin]
+        # take the next node in the frontier, and expand it depth-wise
+        if origin in self._map:
+            # the frontier of unexplored paths (from this Node
+            frontier = [node for node in self._map[origin].keys()
+                        if node not in args['explored']]
+            # recurse down to the next node. This will automatically create a depth-first
+            # approach because the recursion won't bottom out until no more frontier nodes
+            # can be generated
+            for nextNode in frontier:
+                path = path + \
+                    self._planPath(nextNode, destination,
+                                   explored=args['explored'])
+                # stop early as soon as the destination has been found by any route.
+                if destination in path:
+                    return path
+        # didn't reach the destination from any reachable node
+        # no need, therefore, to expand the path for the higher-level call, this is a dead end.
+        return []
+
+    def _planPath_original(self, origin, destination, **args):
+        # the list of explored paths. Recursive invocations pass in explored as a parameter
         if 'explored' not in args:
             args['explored'] = {}
         # add this origin to the explored list
@@ -368,6 +400,30 @@ class Taxi:
     # a hint that maybe some form of CSP solver with automated reasoning might be a good way of implementing this. But
     # other methodologies could work well. For best results you will almost certainly need to use probabilistic reasoning.
     def _bidOnFare(self, time, origin, destination, price):
+        NoCurrentPassengers = self._passenger is None
+        NoAllocatedFares = len(
+            [fare for fare in self._availableFares.values() if fare.allocated]) == 0
+        TimeToOrigin = self._world.travelTime(
+            self._loc, self._world.getNode(origin[0], origin[1]))
+        TimeToDestination = self._world.travelTime(self._world.getNode(origin[0], origin[1]),
+                                                   self._world.getNode(destination[1], destination[1]))
+        FiniteTimeToOrigin = TimeToOrigin > 0
+        FiniteTimeToDestination = TimeToDestination > 0
+        CanAffordToDrive = self._account > TimeToOrigin
+        FairPriceToDestination = price > TimeToDestination
+        PriceBetterThanCost = FairPriceToDestination and FiniteTimeToDestination
+        FareExpiryInFuture = self._maxFareWait > self._world.simTime-time
+        EnoughTimeToReachFare = self._maxFareWait - \
+            self._world.simTime+time > TimeToOrigin
+        SufficientDrivingTime = FiniteTimeToOrigin and EnoughTimeToReachFare
+        WillArriveOnTime = FareExpiryInFuture and SufficientDrivingTime
+        NotCurrentlyBooked = NoCurrentPassengers and NoAllocatedFares
+        CloseEnough = CanAffordToDrive and WillArriveOnTime
+        Worthwhile = PriceBetterThanCost and NotCurrentlyBooked
+        Bid = CloseEnough and Worthwhile
+        return Bid
+
+    def _bidOnFare_original(self, time, origin, destination, price):
         NoCurrentPassengers = self._passenger is None
         NoAllocatedFares = len(
             [fare for fare in self._availableFares.values() if fare.allocated]) == 0

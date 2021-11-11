@@ -10,3 +10,96 @@ TODO:
 
  -Go back and complete the CSP coursework (week 3)
  -Improve _costFare (dispatcher.py)
+
+
+
+
+
+outputValues['fares'] when t = 9:
+
+two fares, one added at t=4, the other added at t=6
+
+ {
+  "(3, 46)": {
+    "5": 4,
+    "6": 4,
+    "7": 4,
+    "8": 4,
+    "9": 4
+  },
+  "(15, 47)": {
+    "7": 6,
+    "8": 6,
+    "9": 6
+  }
+ }
+
+
+             label1 = boldFont.render("RoboUber", 1, whiteText)
+            label2 = boldFont.render("IRL time: ", 1, whiteText)
+            label3 = normalFont.render(
+                "{0}".format(dateStamp), 1, greenText)
+            label8 = boldFont.render("Game time: ", 1, whiteText)
+            label9 = normalFont.render("{0}".format(curTime), 1, greenText)
+            label4 = boldFont.render("Taxis on duty: ", 1, whiteText)
+            label5 = normalFont.render("{0}".format(
+                len(taxisToRedraw)), 1, greenText)
+            label6 = boldFont.render("Fares to pickup: ", 1, whiteText)
+            label7 = normalFont.render(
+                "{0}".format(len(faresToRedraw)), 1, greenText)
+            label10 = boldFont.render("Fares completed: ", 1, whiteText)
+            label11 = normalFont.render("{0}".format(
+                outputValues['completedFares']), 1, greenText)
+            label12 = boldFont.render("Fares cancelled: ", 1, whiteText)
+            label13 = normalFont.render("{0}".format(
+                outputValues['cancelledFares']), 1, greenText)
+            label14 = boldFont.render("Dispatch revenue: ", 1, whiteText)
+            label15 = normalFont.render("£{0}".format(
+                round(outputValues['dispatcherRevenue']), 2), 1, greenText)
+
+            staticLabel0 = boldFont.render("Map Details:", 1, whiteText)
+            staticLabel1 = boldFont.render("Streets: ", 1, whiteText)
+            staticLabel2 = boldFont.render(
+                "{0}".format(len(streets)), 1, whiteText)
+            staticLabel3 = boldFont.render("Junctions: ", 1, whiteText)
+            staticLabel4 = boldFont.render(
+                "{0}".format(len(junctionIdxs)), 1, whiteText)
+
+            displayedTextArea.blit(label1, (10, 10 + (lineSpacing * 0)))
+            displayedTextArea.blit(label2, (10, 10 + (lineSpacing * 1)))
+            displayedTextArea.blit(
+                label3, (dataLabelOffset, 10 + (lineSpacing * 1)))
+            displayedTextArea.blit(label8, (10, 10 + (lineSpacing * 2)))
+            displayedTextArea.blit(
+                label9, (dataLabelOffset, 10 + (lineSpacing * 2)))
+            displayedTextArea.blit(label4, (10, 10 + (lineSpacing * 3)))
+            displayedTextArea.blit(
+                label5, (dataLabelOffset, 10 + (lineSpacing * 3)))
+            displayedTextArea.blit(label6, (10, 10 + (lineSpacing * 4)))
+            displayedTextArea.blit(
+                label7, (dataLabelOffset, 10 + (lineSpacing * 4)))
+            displayedTextArea.blit(label10, (10, 10 + (lineSpacing * 5)))
+            displayedTextArea.blit(
+                label11, (dataLabelOffset, 10 + (lineSpacing * 5)))
+            displayedTextArea.blit(label12, (10, 10 + (lineSpacing * 6)))
+            displayedTextArea.blit(
+                label13, (dataLabelOffset, 10 + (lineSpacing * 6)))
+            displayedTextArea.blit(label14, (10, 10 + (lineSpacing * 7)))
+            displayedTextArea.blit(
+                label15, (dataLabelOffset, 10 + (lineSpacing * 7)))
+            # label4.get_width()
+
+            displayedTextArea.blit(
+                staticLabel0, (10, staticLabelOffset + (lineSpacing * 0)))
+            displayedTextArea.blit(
+                staticLabel1, (10, staticLabelOffset + (lineSpacing * 1)))
+            displayedTextArea.blit(
+                staticLabel2, (dataLabelOffset, staticLabelOffset + (lineSpacing * 1)))
+            displayedTextArea.blit(
+                staticLabel3, (10, staticLabelOffset + (lineSpacing * 2)))
+            displayedTextArea.blit(
+                staticLabel4, (dataLabelOffset, staticLabelOffset + (lineSpacing * 2)))
+
+            #  redraw the whole map
+            displaySurface.blit(displayedBackground, activeRect)
+            displaySurface.blit(displayedTextArea, textRect)
