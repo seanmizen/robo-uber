@@ -384,8 +384,8 @@ class Taxi:
             # can be generated
             for nextNode in frontier:
                 path = path + \
-                    self._planPath(nextNode, destination,
-                                   explored=args['explored'])
+                    self._planPath_original(nextNode, destination,
+                                            explored=args['explored'])
                 # stop early as soon as the destination has been found by any route.
                 if destination in path:
                     return path
