@@ -174,7 +174,7 @@ streets = [strt0, strt1, strt2, strt3, strt4, strt5, strt6, strt7, strt8, strt9,
 
 # create the dict of things we want to record
 outputValues = {'time': [], 'fares': {}, 'taxis': {},
-                'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0}
+                'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': []}
 
 # RoboUber itself will be run as a separate thread for performance, so that screen
 # redraws aren't interfering with model updates.
@@ -366,7 +366,6 @@ roboUber.start()
 
 # this is the display loop which updates the on-screen output.
 while curTime < runTime:
-
     # you can end the simulation by pressing 'q'. This triggers an event which is also passed into the world loop
     try:
         quitevent = next(evt for evt in pygame.event.get(
@@ -430,6 +429,19 @@ while curTime < runTime:
                                            (round(meshSize[0]/2),
                                             round(meshSize[1]/2)),
                                            round(meshSize[0]/3))
+                    if taxi[0] in outputValues['taxiPaths']:
+                        # 2021-11-15: draw current path
+                        path = outputValues['taxiPaths'][taxi[0]]
+                        for node, nextNode in zip(path, path[1:]):
+                            pygame.draw.line(displayedBackground,
+                                             taxiColours[taxi[0]],
+                                             (round(node[0]*meshSize[0]+meshSize[0]/2),
+                                              round(node[1]*meshSize[1]+meshSize[1]/2)),
+                                             (round(nextNode[0]*meshSize[0]+meshSize[0]/2),
+                                              round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
+            else:
+                # no taxis out!
+                print("No taxis out at time {0}".format(curTime))
 
             # some fares still awaiting a taxi?
             if len(faresToRedraw) > 0:
@@ -499,7 +511,7 @@ while curTime < runTime:
 
             # reactivate to save images. Will need fiddling with in Linux.
             if curTime % 10 == 0 and False:
-                pygame.image.save(displaySurface,
+                pygame.image.save(displayedBackground,
                                   "D:\Temp\img\{0}.png".format(str(curTime)))
 
             # advance the time

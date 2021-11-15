@@ -338,54 +338,35 @@ class Taxi:
     # to do much better than this!
     def _planPath(self, origin, destination, **args):
         # the list of explored paths. Recursive invocations pass in explored as a parameter
+        returnVal = []
 
+        if True:
+            returnVal = self._planPath_original(origin, destination, **args)
         if False:
-            return self._planPath_original(origin, destination, args)
+            returnVal = self._iterativeDeepeningSearch(
+                origin, destination, **args)
         if False:
-            return self._iterativeDeepeningSearch(origin, destination, **args)
-        if False:
-            return self._depthFirstSearch(20, origin, destination, args)
+            returnVal = self._depthFirstSearch(
+                200, origin, destination, **args)
 
-        if 'explored' not in args:
-            args['explored'] = {}
-        # add this origin to the explored list
-        # explored is a dict purely so we can hash its index for fast lookup, so its value doesn't matter
-        args['explored'][origin] = None
-        # the actual path we are going to generate
-        path = [origin]
-        # take the next node in the frontier, and expand it depth-wise
-        if origin in self._map:
-            # the frontier of unexplored paths (from this Node
-            frontier = [node for node in self._map[origin].keys()
-                        if node not in args['explored']]
-            # recurse down to the next node. This will automatically create a depth-first
-            # approach because the recursion won't bottom out until no more frontier nodes
-            # can be generated
-            for nextNode in frontier:
-                path = path + \
-                    self._planPath(nextNode, destination,
-                                   explored=args['explored'])
-                # stop early as soon as the destination has been found by any route.
-                if destination in path:
-                    return path
-        # didn't reach the destination from any reachable node
-        # no need, therefore, to expand the path for the higher-level call, this is a dead end.
-        return []
+        args = None
+
+        return returnVal
 
     def _iterativeDeepeningSearch(self, origin, destination, **args):
         # probabilistic depth-first search discounting traffic, etc
-        args['explored'] = {}
-        args['explored'][origin] = None
-
-        path = [origin]
-        maxPly = 50
+        maxPly = 600
         ply = 1
+        path = []
         while ply <= maxPly and destination not in path:
+            path = [origin]
+            args['explored'] = {}
+            args['explored'][origin] = None
             path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += 1
 
-        print("Taxi {0}: path from ({1},{2}): {3}".format(
-            self.number, origin[0], origin[1], len(path)))
+        # print("Taxi {0}: path from ({1},{2}): {3}".format(
+        #    self.number, origin[0], origin[1], len(path)))
         return path
 
     def _depthFirstSearch(self, ply, origin, destination, **args):
@@ -410,8 +391,9 @@ class Taxi:
                                            explored=args['explored'])
                 # stop early as soon as the destination has been found by any route.
                 if destination in path:
-                    print("Taxi {0}: path found to ({1},{2}) found. {4} steps.".format(
-                        self.number, destination[0], destination[1], ply))
+                    # print("Taxi {0}: path found to ({1},{2}) found. {4} steps.".format(
+                    #    self.number, destination[0], destination[1], ply))
+                    # print("Found - path length {0}".format(len(path)))
                     return path
         # didn't reach the destination from any reachable node
         # no need, therefore, to expand the path for the higher-level call, this is a dead end.

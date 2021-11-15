@@ -5,28 +5,9 @@ changing the resolution breaks the code. We're stuck on a small screen.
 TODO:
     -Perform iterative deepening search in taxi.py
     -
-    -
-    -
+    -Bugs:
+    - -Program slows to near halt after some time
+    - -All taxis sometimes unexpectedly disappear
 
  -Go back and complete the CSP coursework (week 3)
  -Improve _costFare (dispatcher.py)
-
-
-
-example outputValues['fares'] when t = 9:
-two fares, one added at t=4, the other added at t=6
-
- {
-  "(3, 46)": {
-    "5": 4,
-    "6": 4,
-    "7": 4,
-    "8": 4,
-    "9": 4
-  },
-  "(15, 47)": {
-    "7": 6,
-    "8": 6,
-    "9": 6
-  }
- }

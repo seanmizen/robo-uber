@@ -967,7 +967,7 @@ class NetWorld:
         self._dispatcher.recvPayment(self, fare.price*0.1)
         fare.taxi.recvMsg(fare.taxi.FARE_PAY, **{'amount': fare.price*0.9})
         print("Fare ({0},{1}) completed. Fare payout: {2}".format(
-            fare.origin[0], fare.origin[1], fare.price))
+            fare.origin[0], fare.origin[1], round(fare.price, 2)))
         # TODO find out and print more fare info? This is pretty crucial.
         self._completedFares += 1
         self._dispatcherRevenue += fare.price*0.1
@@ -1004,6 +1004,7 @@ class NetWorld:
             outputs['cancelledFares'] = self._cancelledFares
             outputs['completedFares'] = self._completedFares
             outputs['dispatcherRevenue'] = self._dispatcherRevenue
+            outputs['taxiPaths'] = {}
             # print(
             #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
@@ -1037,12 +1038,14 @@ class NetWorld:
                     taxi[0].clockTick(self)
                     # similarly basic recording of taxis: just their current position, as long as they
                     # are on duty.
+                    # 2021-11-15: Added Path to outputs
                     if 'taxis' in outputs:
                         if taxi[0].number in outputs['taxis']:
                             outputs['taxis'][taxi[0].number][self._time] = taxi[0].currentLocation
                         else:
                             outputs['taxis'][taxi[0].number] = {
                                 self._time: taxi[0].currentLocation}
+                        outputs['taxiPaths'][taxi[0].number] = taxi[0]._path
                 # an off-duty taxi can come on if it decides to (and will call addTaxi to add itself)
                 else:
                     taxi[0].comeOnDuty(self._time)
