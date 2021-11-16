@@ -10,6 +10,12 @@ import dispatcher
 import time
 import datetime
 import json
+import copy
+import matplotlib.pyplot as plt
+import numpy as np
+# drawing on pygame
+import matplotlib.backends.backend_agg as agg
+
 
 # import matplotlib
 # Note: plt.savefig('foo.png', bbox_inches='tight')
@@ -174,7 +180,7 @@ streets = [strt0, strt1, strt2, strt3, strt4, strt5, strt6, strt7, strt8, strt9,
 
 # create the dict of things we want to record
 outputValues = {'time': [], 'fares': {}, 'taxis': {},
-                'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': []}
+                'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': [], 'historicPathLengths': []}
 
 # RoboUber itself will be run as a separate thread for performance, so that screen
 # redraws aren't interfering with model updates.
@@ -376,9 +382,10 @@ while curTime < runTime:
     # event queue had no 'q' keyboard events. Continue.
     except StopIteration:
         pygame.event.get()
-        if 'time' in outputValues and len(outputValues['time']) > 0 and curTime != outputValues['time'][-1]:
+        values = copy.copy(outputValues)
+        if 'time' in values and len(values['time']) > 0 and curTime != values['time'][-1]:
             # print("curTime: {0}, world.time: {1}".format(
-            #    curTime, outputValues['time'][-1]))
+            #    curTime, values['time'][-1]))
 
             # naive: redraw the entire map each time step. This could be improved by saving a list of squares
             # to redraw and being incremental, but there is a fair amount of bookkeeping involved.
@@ -405,13 +412,13 @@ while curTime < runTime:
             faresToRedraw = dict([(fare[0], dict([(time[0], time[1])
                                                   for time in fare[1].items()
                                                   if time[0] > curTime]))
-                                  for fare in outputValues['fares'].items()
+                                  for fare in values['fares'].items()
                                   if sorted(list(fare[1].keys()))[-1] > curTime])
 
             taxisToRedraw = dict([(taxi[0], dict([(taxiPos[0], taxiPos[1])
                                                   for taxiPos in taxi[1].items()
                                                   if taxiPos[0] > curTime]))
-                                  for taxi in outputValues['taxis'].items()
+                                  for taxi in values['taxis'].items()
                                   if sorted(list(taxi[1].keys()))[-1] > curTime])
 
             # some taxis are on duty?
@@ -429,9 +436,9 @@ while curTime < runTime:
                                            (round(meshSize[0]/2),
                                             round(meshSize[1]/2)),
                                            round(meshSize[0]/3))
-                    if taxi[0] in outputValues['taxiPaths']:
+                    if taxi[0] in values['taxiPaths']:
                         # 2021-11-15: draw current path
-                        path = outputValues['taxiPaths'][taxi[0]]
+                        path = values['taxiPaths'][taxi[0]]
                         for node, nextNode in zip(path, path[1:]):
                             pygame.draw.line(displayedBackground,
                                              taxiColours[taxi[0]],
@@ -484,11 +491,11 @@ while curTime < runTime:
             addLabel("Taxis on duty: ", "{0}".format(len(taxisToRedraw)))
             addLabel("Fares to pickup: ", "{0}".format(len(faresToRedraw)))
             addLabel("Fares completed: ", "{0}".format(
-                outputValues['completedFares']))
+                values['completedFares']))
             addLabel("Fares cancelled: ", "{0}".format(
-                outputValues['cancelledFares']))
+                values['cancelledFares']))
             addLabel("Dispatch revenue: ", "£{0}".format(
-                round(outputValues['dispatcherRevenue'], 2)))
+                round(values['dispatcherRevenue'], 2)))
             addLabel()
             addLabel("Map Details:")
             addLabel("Streets: ", "{0}".format(
@@ -510,9 +517,30 @@ while curTime < runTime:
             pygame.display.flip()
 
             # reactivate to save images. Will need fiddling with in Linux.
-            if curTime % 10 == 0 and False:
+            if curTime % 100 == 0 and False:
                 pygame.image.save(displayedBackground,
                                   "D:\Temp\img\{0}.png".format(str(curTime)))
+            if curTime % 100 == 0 and True:
+                # with plt.xkcd():
+                #plt.axis([40, 160, 0, 0.03])
+                # plt.grid(True)
+                hist = plt.hist(values['historicPathLengths'])
+                if curTime == 0:
+                    plt.xlabel('Steps')
+                    plt.ylabel('Frequency')
+                    plt.title('Frequency of travel distances (deepening ply)')
+                    plt.ion()
+                    # plt.show()
+                else:
+                    pass
+                    # plt.draw()
+
+                canvas = agg.FigureCanvasAgg(hist)
+                canvas.draw()
+                renderer = canvas.get_renderer()
+                raw_data = renderer.tostring_rgb()
 
             # advance the time
             curTime += 1
+        # elif len(values['time']) > 0 and curTime == values['time'][-1]:
+        #    curTime += 1

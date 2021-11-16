@@ -64,6 +64,7 @@ class Taxi:
         self._world = world
         self.number = taxi_num
         self.onDuty = False
+        self.historicPathLengths = []
         self._onDutyTime = on_duty_time
         self._offDutyTime = off_duty_time
         self._onDutyPos = start_point
@@ -340,9 +341,9 @@ class Taxi:
         # the list of explored paths. Recursive invocations pass in explored as a parameter
         returnVal = []
 
-        if True:
-            returnVal = self._planPath_original(origin, destination, **args)
         if False:
+            returnVal = self._planPath_original(origin, destination, **args)
+        if True:
             returnVal = self._iterativeDeepeningSearch(
                 origin, destination, **args)
         if False:
@@ -355,7 +356,7 @@ class Taxi:
 
     def _iterativeDeepeningSearch(self, origin, destination, **args):
         # probabilistic depth-first search discounting traffic, etc
-        maxPly = 600
+        maxPly = 2000
         ply = 1
         path = []
         while ply <= maxPly and destination not in path:
@@ -364,6 +365,11 @@ class Taxi:
             args['explored'][origin] = None
             path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += 1
+
+        if len(path) == 0:
+            print("path 0?")
+
+        self.historicPathLengths.append(ply)
 
         # print("Taxi {0}: path from ({1},{2}): {3}".format(
         #    self.number, origin[0], origin[1], len(path)))

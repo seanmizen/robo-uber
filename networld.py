@@ -1000,11 +1000,13 @@ class NetWorld:
         if outputs is None:
             outputs = {}
         ticksRun = 0
+
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
             outputs['cancelledFares'] = self._cancelledFares
             outputs['completedFares'] = self._completedFares
             outputs['dispatcherRevenue'] = self._dispatcherRevenue
             outputs['taxiPaths'] = {}
+            outputs['historicPathLengths'] = []
             # print(
             #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
@@ -1049,6 +1051,8 @@ class NetWorld:
                 # an off-duty taxi can come on if it decides to (and will call addTaxi to add itself)
                 else:
                     taxi[0].comeOnDuty(self._time)
+                outputs['historicPathLengths'].append(
+                    taxi[0].historicPathLengths)
             # then run the dispatcher. With this ordering, taxis bidding for fares can always get
             # them allocated immediately (provided the dispatcher decides to do so). Taxis always
             # receive notice of potential fares for collection one clock after the fare first appeared
