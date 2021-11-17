@@ -340,12 +340,13 @@ class Taxi:
     # journey. Below is a naive depth-first search implementation. You should be able
     # to do much better than this!
     def _planPath(self, origin, destination, **args):
-        # the list of explored paths. Recursive invocations pass in explored as a parameter
         returnVal = []
 
-        if False:
-            returnVal = self._planPath_original(origin, destination, **args)
         if True:
+            returnVal = self._planPath_original(origin, destination, **args)
+            if len(returnVal) == 0:
+                print("Taxi {0} - path 0?".format(self.number))
+        if False:
             returnVal = self._iterativeDeepeningSearch(
                 origin, destination, **args)
         if False:
