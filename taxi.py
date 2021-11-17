@@ -65,6 +65,8 @@ class Taxi:
         self.number = taxi_num
         self.onDuty = False
         self.historicPathLengths = []
+        self.calls = 0
+        self.steps = 0
         self._onDutyTime = on_duty_time
         self._offDutyTime = off_duty_time
         self._onDutyPos = start_point
@@ -356,7 +358,8 @@ class Taxi:
 
     def _iterativeDeepeningSearch(self, origin, destination, **args):
         # probabilistic depth-first search discounting traffic, etc
-        maxPly = 2000
+        self.calls += 1
+        maxPly = 150
         ply = 1
         path = []
         while ply <= maxPly and destination not in path:
@@ -366,8 +369,12 @@ class Taxi:
             path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += 1
 
+        f = open("numbers.csv", "a")
+        f.write("{0}\n".format(ply))
+        f.close()
+
         if len(path) == 0:
-            print("path 0?")
+            print("Taxi {0} - path 0?".format(self.number))
 
         self.historicPathLengths.append(ply)
 
@@ -376,9 +383,7 @@ class Taxi:
         return path
 
     def _depthFirstSearch(self, ply, origin, destination, **args):
-        # print("searching for ({0},{1}), ply {2}".format(
-        #    destination[0], destination[1], ply))
-        # adapted from _planPath_original
+        self.calls += 1
         if 'explored' not in args:
             args['explored'] = {}
         args['explored'][origin] = None
@@ -392,6 +397,7 @@ class Taxi:
             # approach because the recursion won't bottom out until no more frontier nodes
             # can be generated
             for nextNode in frontier:
+                self.steps += 1
                 path = path + \
                     self._depthFirstSearch(ply - 1, nextNode, destination,
                                            explored=args['explored'])
@@ -406,6 +412,7 @@ class Taxi:
         return []
 
     def _planPath_original(self, origin, destination, **args):
+        self.calls += 1
         # the list of explored paths. Recursive invocations pass in explored as a parameter
         if 'explored' not in args:
             args['explored'] = {}
@@ -423,6 +430,7 @@ class Taxi:
             # approach because the recursion won't bottom out until no more frontier nodes
             # can be generated
             for nextNode in frontier:
+                self.steps += 1
                 path = path + \
                     self._planPath_original(nextNode, destination,
                                             explored=args['explored'])

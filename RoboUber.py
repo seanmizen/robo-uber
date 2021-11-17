@@ -247,7 +247,7 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
             #        outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
             if threadTime != svcArea.simTime:
                 threadTime += 1
-            time.sleep(0.01)  # !! was 1
+            time.sleep(0.1)  # !! was 1
 
 
 # event to manage a user exit, invoked by pressing 'q' on the keyboard
@@ -520,7 +520,7 @@ while curTime < runTime:
             if curTime % 100 == 0 and False:
                 pygame.image.save(displayedBackground,
                                   "D:\Temp\img\{0}.png".format(str(curTime)))
-            if curTime % 100 == 0 and True:
+            if curTime % 100 == 0 and False:
                 # with plt.xkcd():
                 #plt.axis([40, 160, 0, 0.03])
                 # plt.grid(True)
@@ -539,6 +539,17 @@ while curTime < runTime:
                 canvas.draw()
                 renderer = canvas.get_renderer()
                 raw_data = renderer.tostring_rgb()
+
+            if curTime == 100:
+                print("========================================")
+                print("========================================")
+                print("")
+                print("Time: {0}".format(curTime))
+                print("Calls: {0}".format(values['calls']))
+                print("Steps: {0}".format(values['steps']))
+                print("")
+                print("========================================")
+                print("========================================")
 
             # advance the time
             curTime += 1

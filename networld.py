@@ -1001,12 +1001,15 @@ class NetWorld:
             outputs = {}
         ticksRun = 0
 
+        outputs['historicPathLengths'] = []
+        outputs['calls'] = 0
+        outputs['steps'] = 0
+
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
             outputs['cancelledFares'] = self._cancelledFares
             outputs['completedFares'] = self._completedFares
             outputs['dispatcherRevenue'] = self._dispatcherRevenue
             outputs['taxiPaths'] = {}
-            outputs['historicPathLengths'] = []
             # print(
             #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
@@ -1034,7 +1037,11 @@ class NetWorld:
                         outputs['nodes'][node.index] = {
                             self._time: node.traffic}
             # next go through the (live) taxis
+            outputs['calls'] = 0
+            outputs['steps'] = 0
             for taxi in self._taxis.items():
+                outputs['calls'] += taxi[0].calls
+                outputs['steps'] += taxi[0].steps
                 if taxi[0].onDuty:
                     taxi[0].drive(taxi[1])
                     taxi[0].clockTick(self)
