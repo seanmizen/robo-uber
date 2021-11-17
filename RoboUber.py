@@ -345,9 +345,9 @@ pygame.display.flip()
 taxiColours = {}
 # possible colours for taxis: black, blue, green, red, magenta, cyan, yellow, white
 taxiPalette = [pygame.Color(0, 0, 0),
-               pygame.Color(0, 0, 255),
-               pygame.Color(0, 255, 0),
                pygame.Color(255, 0, 0),
+               pygame.Color(0, 255, 0),
+               pygame.Color(0, 0, 255),
                pygame.Color(255, 0, 255),
                pygame.Color(0, 255, 255),
                pygame.Color(255, 255, 0),
