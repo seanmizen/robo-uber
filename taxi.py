@@ -342,11 +342,12 @@ class Taxi:
     def _planPath(self, origin, destination, **args):
         returnVal = []
 
-        if True:
+        if False:
             returnVal = self._planPath_original(origin, destination, **args)
             if len(returnVal) == 0:
-                print("Taxi {0} - path 0?".format(self.number))
-        if False:
+                print("Taxi {0} - path 0?\nOrigin: ({1}, {2}) Destination: ({3}, {4})".format(
+                    self.number, origin[0], origin[1], destination[0], destination[1]))
+        if True:
             returnVal = self._iterativeDeepeningSearch(
                 origin, destination, **args)
         if False:
@@ -370,12 +371,12 @@ class Taxi:
             path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += 1
 
-        f = open("numbers.csv", "a")
-        f.write("{0}\n".format(ply))
-        f.close()
+        with open("numbers.csv", "a") as f:
+            f.write("{0}\n".format(ply))
 
         if len(path) == 0:
-            print("Taxi {0} - path 0?".format(self.number))
+            print("Taxi {0} - path 0?\nOrigin: ({1}, {2}) Destination: ({3}, {4})".format(
+                self.number, origin[0], origin[1], destination[0], destination[1]))
 
         self.historicPathLengths.append(ply)
 
