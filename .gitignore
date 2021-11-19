@@ -1,2 +1,3 @@
 __pycache__/*.pyc
 numbers.csv
+.DS_Store

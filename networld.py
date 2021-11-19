@@ -91,8 +91,8 @@ class Fare:
         expectedTime2Dest = self._parent.travelTime(
             self._origin, self._destination)
         if (expectedTime2Dest < 0) or (self._price > 10*expectedTime2Dest):
-            print("Fare ({0},{1}) abandoned because expectedTime2Dest was {2} and price was {3}".format(
-                self.origin[0], self.origin[1], expectedTime2Dest, round(self._price, 2)))
+            # print("Fare ({0},{1}) abandoned because expectedTime2Dest was {2} and price was {3}".format(
+            #     self.origin[0], self.origin[1], expectedTime2Dest, round(self._price, 2)))
             self._waitTime = 0
 
     # clear gets rid of any references to objects so that garbage collection can
@@ -402,7 +402,7 @@ class Node:
         if (len(self._occupied) == self._capacity or direction in self._occupied or
             direction not in self._incoming or self._incoming[direction] != occupant
                 or time2Occupy < 0):
-            print("Taxi {0} can't occupy node: full".format(occupant.number))
+            # print("Taxi {0} can't occupy node: full".format(occupant.number))
             return (None, -1)
         self._occupied[direction] = (
             occupant, self._parent.simTime+time2Occupy)
@@ -966,8 +966,8 @@ class NetWorld:
     def completeFare(self, fare):
         self._dispatcher.recvPayment(self, fare.price*0.1)
         fare.taxi.recvMsg(fare.taxi.FARE_PAY, **{'amount': fare.price*0.9})
-        print("Fare ({0},{1}) completed. Fare payout: {2}".format(
-            fare.origin[0], fare.origin[1], round(fare.price, 2)))
+        # print("Fare ({0},{1}) completed. Fare payout: {2}".format(
+        #     fare.origin[0], fare.origin[1], round(fare.price, 2)))
         # TODO find out and print more fare info? This is pretty crucial.
         self._completedFares += 1
         self._dispatcherRevenue += fare.price*0.1

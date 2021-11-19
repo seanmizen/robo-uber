@@ -172,8 +172,8 @@ class Taxi:
             if self._account <= 0:
                 self._account = self._dailyLoss
             self.onDuty = True
-            print(
-                "Taxi {0} is coming on-duty".format(self.number))
+            # print(
+            #     "Taxi {0} is coming on-duty".format(self.number))
             onDutyPose = self._world.addTaxi(self, self._onDutyPos)
             self._nextLoc = onDutyPose[0]
             self._nextDirection = onDutyPose[1]
@@ -186,8 +186,8 @@ class Taxi:
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
         if self._account <= 0 and self._passenger is None:
-            print(
-                "Loss too high. Taxi {0} is going off-duty".format(self.number))
+            # print(
+            #     "Loss too high. Taxi {0} is going off-duty".format(self.number))
             self.onDuty = False
             self._offDutyTime = self._world.simTime
         # have we reached our last known destination? Decide what to do now.
@@ -344,9 +344,6 @@ class Taxi:
 
         if False:
             returnVal = self._planPath_original(origin, destination, **args)
-            if len(returnVal) == 0:
-                print("Taxi {0} - path 0?\nOrigin: ({1}, {2}) Destination: ({3}, {4})".format(
-                    self.number, origin[0], origin[1], destination[0], destination[1]))
         if True:
             returnVal = self._iterativeDeepeningSearch(
                 origin, destination, **args)
