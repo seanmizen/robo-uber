@@ -29,7 +29,7 @@ class FareInfo:
     several hours. A Taxi also expects a map of the service area which forms part of its knowledge
     base. Taxis start from some fixed location in the world. Note that they can't just 'appear' there:
     any real Node in the world may have traffic (or other taxis!) there, and if its start node is
-    unavailable, the taxi won't enter the world until it is. Taxis collect revenue for fares, and 
+    unavailable, the taxi won't enter the world until it is. Taxis collect revenue for fares, and
     each minute of active time, whether driving, idle, or conducting a fare, likewise costs them £1.
 '''
 
@@ -50,7 +50,7 @@ class Taxi:
          it would have lost 200, leaving it with only £56 to be able to absorb before going off-duty.
          max_wait - this is a heuristic the taxi can use to decide whether a fare is even worth bidding on.
          It is an estimate of how many minutes, on average, a fare is likely to wait to be collected.
-         on_duty_time - this says at what time the taxi comes on duty (default is 0, at the start of the 
+         on_duty_time - this says at what time the taxi comes on duty (default is 0, at the start of the
          simulation)
          off_duty_time - this gives the number of minutes the taxi will wait before returning to duty if
          it goes off (default is 0, never return)
@@ -353,6 +353,9 @@ class Taxi:
         if False:
             returnVal = self._depthFirstSearch(
                 200, origin, destination, **args)
+        if False:
+            returnVal = self._iterativeDeepeningSearch(
+                (49, 15), (40, 0), **args)
 
         args = None
 
@@ -371,17 +374,7 @@ class Taxi:
             path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += 1
 
-        with open("numbers.csv", "a") as f:
-            f.write("{0}\n".format(ply))
-
-        if len(path) == 0:
-            print("Taxi {0} - path 0?\nOrigin: ({1}, {2}) Destination: ({3}, {4})".format(
-                self.number, origin[0], origin[1], destination[0], destination[1]))
-
         self.historicPathLengths.append(ply)
-
-        # print("Taxi {0}: path from ({1},{2}): {3}".format(
-        #    self.number, origin[0], origin[1], len(path)))
         return path
 
     def _depthFirstSearch(self, ply, origin, destination, **args):
@@ -391,6 +384,10 @@ class Taxi:
         args['explored'][origin] = None
 
         path = [origin]
+        if destination in path:
+            # exit early if this is the destination
+            return path
+
         if origin in self._map and ply > 0:
             # the frontier of unexplored paths (from this Node)
             frontier = [node for node in self._map[origin].keys()
@@ -398,6 +395,7 @@ class Taxi:
             # recurse down to the next node. This will automatically create a depth-first
             # approach because the recursion won't bottom out until no more frontier nodes
             # can be generated
+
             for nextNode in frontier:
                 self.steps += 1
                 path = path + \
@@ -405,8 +403,6 @@ class Taxi:
                                            explored=args['explored'])
                 # stop early as soon as the destination has been found by any route.
                 if destination in path:
-                    # print("Taxi {0}: path found to ({1},{2}) found. {4} steps.".format(
-                    #    self.number, destination[0], destination[1], ply))
                     # print("Found - path length {0}".format(len(path)))
                     return path
         # didn't reach the destination from any reachable node
