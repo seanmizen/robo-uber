@@ -14,6 +14,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import curses
+import os
 # drawing on pygame
 # import matplotlib.backends.backend_agg as agg
 
@@ -258,101 +259,9 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
     # -Coefficient of variation
 
 
-pygame.init()
+def dateStamp():
+    return str(datetime.datetime.now()).split('.')[0]
 
-# New:
-# initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
-boldFont = pygame.font.Font("./Fonts/SourceCodePro-Bold.ttf", boldFontSize)
-normalFont = pygame.font.Font(
-    "./Fonts/SourceCodePro-SemiBold.ttf", boldFontSize)
-# boldFont.bold = True
-
-# |pygame.SCALED arrgh...new in pygame 2.0, but pip install installs 1.9.6 on Ubuntu 16.04 LTS
-displaySurface = pygame.display.set_mode(
-    size=(displaySize[0] + displayedTextAreaWidth, displaySize[1]), flags=pygame.RESIZABLE)
-backgroundRect = None
-aspectRatio = worldX/worldY
-if aspectRatio > 4/3:
-    activeSize = (displaySize[0]-100, (displaySize[0]-100)/aspectRatio)
-else:
-    # activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
-    activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
-# new: text area on the left of the screen
-
-displayedTextArea = pygame.Surface(
-    (displayedTextAreaWidth, displaySize[1] - 100))
-displayedTextArea.fill(pygame.Color(33, 33, 33))
-displayedBackground = pygame.Surface(activeSize)
-displayedBackground.fill(pygame.Color(210, 210, 210))
-# activeRect = pygame.Rect(X position, not size. hmm., round(
-textRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2), round(
-    (displaySize[1]-activeSize[1])/2), displayedTextAreaWidth, activeSize[1])
-activeRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2) + displayedTextAreaWidth, round(
-    (displaySize[1]-activeSize[1])/2), activeSize[0], activeSize[1])
-
-meshSize = ((activeSize[0]/worldX), round(activeSize[1]/worldY))
-
-# create a mesh of possible drawing positions
-positions = [[pygame.Rect(round(x*meshSize[0]),
-                          round(y*meshSize[1]),
-                          round(meshSize[0]),
-                          round(meshSize[1]))
-              for y in range(worldY)]
-             for x in range(worldX)]
-drawPositions = [[displayedBackground.subsurface(
-    positions[x][y]) for y in range(worldY)] for x in range(worldX)]
-
-# junctions exist only at labelled locations; it's convenient to create subsurfaces for them
-jctRect = pygame.Rect(round(meshSize[0]/4),
-                      round(meshSize[1]/4),
-                      round(meshSize[0]/2),
-                      round(meshSize[1]/2))
-jctSquares = [drawPositions[jct[0]][jct[1]].subsurface(
-    jctRect) for jct in junctionIdxs]
-
-# initialise the network edge drawings (as grey lines)
-for street in streets:
-    pygame.draw.aaline(displayedBackground,
-                       pygame.Color(128, 128, 128),
-                       (round(street.nodeA[0]*meshSize[0]+meshSize[0]/2),
-                        round(street.nodeA[1]*meshSize[1]+meshSize[1]/2)),
-                       (round(street.nodeB[0]*meshSize[0]+meshSize[0]/2), round(street.nodeB[1]*meshSize[1]+meshSize[1]/2)))
-
-# initialise the junction drawings (as grey boxes)
-for jct in range(len(junctionIdxs)):
-    jctSquares[jct].fill(pygame.Color(192, 192, 192))
-    # note that the rectangle target in draw.rect refers to a Rect relative to the source surface, not an
-    # absolute-coordinates Rect.
-    pygame.draw.rect(jctSquares[jct], pygame.Color(128, 128, 128), pygame.Rect(
-        0, 0, round(meshSize[0]/2), round(meshSize[1]/2)), 5)
-
-# redraw the entire image
-displaySurface.blit(displayedBackground, activeRect)
-displaySurface.blit(displayedTextArea, textRect)
-pygame.display.flip()
-
-# which taxi is associated with which colour
-taxiColours = {}
-# possible colours for taxis: black, blue, green, red, magenta, cyan, yellow, white
-taxiPalette = [pygame.Color(0, 0, 0),
-               pygame.Color(255, 0, 0),
-               pygame.Color(0, 255, 0),
-               pygame.Color(0, 0, 255),
-               pygame.Color(255, 0, 255),
-               pygame.Color(0, 255, 255),
-               pygame.Color(255, 255, 0),
-               pygame.Color(255, 255, 255)]
-
-# relative positions of taxi and fare markers in a mesh point
-taxiRect = pygame.Rect(round(meshSize[0]/3),
-                       round(meshSize[1]/3),
-                       round(meshSize[0]/3),
-                       round(meshSize[1]/3))
-
-fareRect = pygame.Rect(round(3*meshSize[0]/8),
-                       round(3*meshSize[1]/8),
-                       round(meshSize[0]/4),
-                       round(meshSize[1]/4))
 
 # curTime is the time point currently displayed
 curTime = 0
@@ -376,9 +285,9 @@ roboUber = threading.Thread(target=runRoboUber,
                                     'fareProbNormal': fareProbNormal,
                                     'threadIdentifier': 0})
 
-roboUberThreads = []
+roboUberThreads = [roboUber]
 # index 0 reserved for default thread
-for i in range(1, 2):
+for i in range(1, 8):
     outputValuesArray.append(copy.deepcopy(outputValuesTemplate))
     roboUberThreads.append(threading.Thread(target=runRoboUber,
                                             name='RoboUberThread',
@@ -399,16 +308,113 @@ for i in range(1, 2):
 
 # start the simulation (which will automatically stop at the end of the run time)
 displayUI = False
-roboUber.start()
-print(
-    "{0} - Main thread started".format(str(datetime.datetime.now()).split('.')[0]))
 
-if not displayUI:
+if displayUI:
+    roboUber.start()
+    print(
+        "{0} - Main thread started".format(dateStamp()))
+    pygame.init()
+
+    # New:
+    # initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
+    boldFont = pygame.font.Font("./Fonts/SourceCodePro-Bold.ttf", boldFontSize)
+    normalFont = pygame.font.Font(
+        "./Fonts/SourceCodePro-SemiBold.ttf", boldFontSize)
+    # boldFont.bold = True
+
+    # |pygame.SCALED arrgh...new in pygame 2.0, but pip install installs 1.9.6 on Ubuntu 16.04 LTS
+    displaySurface = pygame.display.set_mode(
+        size=(displaySize[0] + displayedTextAreaWidth, displaySize[1]), flags=pygame.RESIZABLE)
+    backgroundRect = None
+    aspectRatio = worldX/worldY
+    if aspectRatio > 4/3:
+        activeSize = (displaySize[0]-100, (displaySize[0]-100)/aspectRatio)
+    else:
+        # activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
+        activeSize = (aspectRatio*(displaySize[1]-100), displaySize[1]-100)
+    # new: text area on the left of the screen
+
+    displayedTextArea = pygame.Surface(
+        (displayedTextAreaWidth, displaySize[1] - 100))
+    displayedTextArea.fill(pygame.Color(33, 33, 33))
+    displayedBackground = pygame.Surface(activeSize)
+    displayedBackground.fill(pygame.Color(210, 210, 210))
+    # activeRect = pygame.Rect(X position, not size. hmm., round(
+    textRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2), round(
+        (displaySize[1]-activeSize[1])/2), displayedTextAreaWidth, activeSize[1])
+    activeRect = pygame.Rect(round((displaySize[0]-activeSize[0]) / 2) + displayedTextAreaWidth, round(
+        (displaySize[1]-activeSize[1])/2), activeSize[0], activeSize[1])
+
+    meshSize = ((activeSize[0]/worldX), round(activeSize[1]/worldY))
+
+    # create a mesh of possible drawing positions
+    positions = [[pygame.Rect(round(x*meshSize[0]),
+                              round(y*meshSize[1]),
+                              round(meshSize[0]),
+                              round(meshSize[1]))
+                  for y in range(worldY)]
+                 for x in range(worldX)]
+    drawPositions = [[displayedBackground.subsurface(
+        positions[x][y]) for y in range(worldY)] for x in range(worldX)]
+
+    # junctions exist only at labelled locations; it's convenient to create subsurfaces for them
+    jctRect = pygame.Rect(round(meshSize[0]/4),
+                          round(meshSize[1]/4),
+                          round(meshSize[0]/2),
+                          round(meshSize[1]/2))
+    jctSquares = [drawPositions[jct[0]][jct[1]].subsurface(
+        jctRect) for jct in junctionIdxs]
+
+    # initialise the network edge drawings (as grey lines)
+    for street in streets:
+        pygame.draw.aaline(displayedBackground,
+                           pygame.Color(128, 128, 128),
+                           (round(street.nodeA[0]*meshSize[0]+meshSize[0]/2),
+                            round(street.nodeA[1]*meshSize[1]+meshSize[1]/2)),
+                           (round(street.nodeB[0]*meshSize[0]+meshSize[0]/2), round(street.nodeB[1]*meshSize[1]+meshSize[1]/2)))
+
+    # initialise the junction drawings (as grey boxes)
+    for jct in range(len(junctionIdxs)):
+        jctSquares[jct].fill(pygame.Color(192, 192, 192))
+        # note that the rectangle target in draw.rect refers to a Rect relative to the source surface, not an
+        # absolute-coordinates Rect.
+        pygame.draw.rect(jctSquares[jct], pygame.Color(128, 128, 128), pygame.Rect(
+            0, 0, round(meshSize[0]/2), round(meshSize[1]/2)), 5)
+
+    # redraw the entire image
+    displaySurface.blit(displayedBackground, activeRect)
+    displaySurface.blit(displayedTextArea, textRect)
+    pygame.display.flip()
+
+    # which taxi is associated with which colour
+    taxiColours = {}
+    # possible colours for taxis: black, blue, green, red, magenta, cyan, yellow, white
+    taxiPalette = [pygame.Color(0, 0, 0),
+                   pygame.Color(255, 0, 0),
+                   pygame.Color(0, 255, 0),
+                   pygame.Color(0, 0, 255),
+                   pygame.Color(255, 0, 255),
+                   pygame.Color(0, 255, 255),
+                   pygame.Color(255, 255, 0),
+                   pygame.Color(255, 255, 255)]
+
+    # relative positions of taxi and fare markers in a mesh point
+    taxiRect = pygame.Rect(round(meshSize[0]/3),
+                           round(meshSize[1]/3),
+                           round(meshSize[0]/3),
+                           round(meshSize[1]/3))
+
+    fareRect = pygame.Rect(round(3*meshSize[0]/8),
+                           round(3*meshSize[1]/8),
+                           round(meshSize[0]/4),
+                           round(meshSize[1]/4))
+else:
+    displayUI
     # assume this is a batch run. Create more threads.
     for i, thread in enumerate(roboUberThreads, start=1):
         thread.start()
         print(
-            "{0} - Batch thread {1} started.".format(str(datetime.datetime.now()).split('.')[0], i))
+            "{0} - Thread {1} started.".format(dateStamp(), i))
 
     # threads will now be running. set up a curses terminal session.
     stdscr = curses.initscr()
@@ -416,26 +422,58 @@ if not displayUI:
     curses.cbreak()
     stdscr.keypad(1)
 
-    begin_x = 20
-    begin_y = 7
-    height = 5
+    beginX = 20
+    beginY = 7
+    height = 9
+    maxLines = height - 1
     width = 40
-    win = curses.newwin(height, width, begin_y, begin_x)
+    win = curses.newwin(height, width, beginY, beginX)
 
-    # wait for the main thread to finish
+    #progressCounter = 10
+    #remainingCounter = 90
+    while roboUber.is_alive():
+        linesUsed = 0
+        threadCount = 0
+        for i, thread in enumerate(roboUberThreads):
+
+            #progressCounter = outputValuesArray[i]['dispatcherRevenue']
+            progressCounter = int(
+                100 * (outputValuesArray[i]['time'][-1] / runTime))
+
+            # width 100 progress bar
+            completeString = "|" + ("#" * progressCounter) + \
+                (" " * (100 - progressCounter)) + "| $" + \
+                str(int(outputValuesArray[i]['dispatcherRevenue']))
+            if linesUsed <= maxLines:
+                stdscr.addstr(
+                    linesUsed + 1, 0, completeString)
+            if thread.is_alive:
+                threadCount += 1
+            linesUsed += 1
+
+        #
+        #
+        #
+        #
+
+        stdscr.addstr(
+            0, 0, "{0} - {1} threads running.".format(dateStamp(), threadCount))
+
+        stdscr.refresh()
+        # print("Alive!")
+
+    # (currently redundant) wait for the main thread to finish
     roboUber.join()
     # end curses
     curses.nocbreak()
     stdscr.keypad(0)
     curses.echo()
     curses.endwin()
-    print(
-        "{0} - Main thread rejoined.".format(str(datetime.datetime.now()).split('.')[0]))
     # rejoin batch threads
     for i, thread in enumerate(roboUberThreads, start=1):
         thread.join()
-        print("{0} - Batch thread {1} rejoined.".format(
-            str(datetime.datetime.now()).split('.')[0], i))
+        print("{0} - Thread {1} rejoined.".format(
+            dateStamp(), i))
 
 
 # this is the display loop which updates the on-screen output.
@@ -607,11 +645,16 @@ while curTime < runTime and displayUI:
 
             # reactivate to save images. Will need fiddling with in Linux.
             if curTime % 100 == 0 and False:
-                pygame.image.save(displayedBackground,
-                                  "D:\Temp\img\{0}.png".format(str(curTime)))
+                if os.name == 'nt':
+                    # If system is Windows
+                    pygame.image.save(displayedBackground,
+                                      "D:\Temp\img\{0}.png".format(str(curTime)))
+                else:
+                    pygame.image.save(displayedBackground,
+                                      "img/{0}.png".format(str(curTime)))
             if curTime % 100 == 0 and False:
                 # with plt.xkcd():
-                #plt.axis([40, 160, 0, 0.03])
+                # plt.axis([40, 160, 0, 0.03])
                 # plt.grid(True)
                 hist = plt.hist(values['historicPathLengths'])
                 if curTime == 0:
