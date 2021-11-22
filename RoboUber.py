@@ -34,7 +34,7 @@ tloc = threading.local()
 # basic parameters
 worldX = 50
 worldY = 50
-runTime = 1440
+runTime = 1440 * 2
 # displayedTextArea will use displaySize[1] for height - only specify a width here
 displayedTextAreaWidth = 400
 boldFontSize = 16
@@ -43,7 +43,7 @@ displaySize = (1024, 768)
 # trafficOn = True
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = False
+displayUI = True
 # only used if displayUI == False:
 threadsToUse = 10
 
