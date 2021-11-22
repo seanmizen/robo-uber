@@ -18,6 +18,8 @@ import os
 # drawing on pygame
 # import matplotlib.backends.backend_agg as agg
 
+tloc = threading.local()
+
 
 # import matplotlib
 # Note: plt.savefig('foo.png', bbox_inches='tight')
@@ -237,11 +239,16 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
         #                          for k, v in outputValues['fares'].items()), indent=2))
 
         # exit if 'q' has been pressed
+        if 'ticks' in args:
+            tickSetting = args['ticks']
+        else:
+            tickSetting = 1
+
         if stop.is_set():
             threadRunTime = 0
         else:
             svcArea.runWorld(
-                ticks=0, outputs=outputValuesArray[args['threadIdentifier']])
+                ticks=tickSetting, outputs=outputValuesArray[args['threadIdentifier']])
             # if (outputValues['time'][-1] % 5 == 0):
             #    print("Time: {0}, Fares: {1}, Taxis: {2}".format(
             #        outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
@@ -269,6 +276,12 @@ curTime = 0
 # event to manage a user exit, invoked by pressing 'q' on the keyboard
 userExit = threading.Event()
 
+# if displayUI set to true, view the map and use ticks.
+# if displayUI set to false, set ticks = 0 and run x number of threads
+displayUI = False
+# only used if displayUI == False:
+threadsToUse = 10
+
 roboUber = threading.Thread(target=runRoboUber,
                             name='RoboUberThread',
                             kwargs={'worldX': worldX,
@@ -283,11 +296,13 @@ roboUber = threading.Thread(target=runRoboUber,
                                     'fareProbPopular': fareProbPopular,
                                     'fareProbSemiPopular': fareProbSemiPopular,
                                     'fareProbNormal': fareProbNormal,
-                                    'threadIdentifier': 0})
+                                    'threadIdentifier': 0,
+                                    'ticks': int(displayUI)})
+# ticks: int(displayUI) -- if UI, use ticks. otherwise, don't wait.
 
 roboUberThreads = [roboUber]
 # index 0 reserved for default thread
-for i in range(1, 10):
+for i in range(1, threadsToUse):
     outputValuesArray.append(copy.deepcopy(outputValuesTemplate))
     roboUberThreads.append(threading.Thread(target=runRoboUber,
                                             name='RoboUberThread',
@@ -303,12 +318,11 @@ for i in range(1, 10):
                                                     'fareProbPopular': fareProbPopular,
                                                     'fareProbSemiPopular': fareProbSemiPopular,
                                                     'fareProbNormal': fareProbNormal,
-                                                    'threadIdentifier': i}))
+                                                    'threadIdentifier': i,
+                                                    'ticks': 0}))
 
 
 # start the simulation (which will automatically stop at the end of the run time)
-displayUI = False
-
 if displayUI:
     roboUber.start()
     print(
@@ -408,9 +422,219 @@ if displayUI:
                            round(3*meshSize[1]/8),
                            round(meshSize[0]/4),
                            round(meshSize[1]/4))
+
+    # this is the display loop which updates the on-screen output.
+    while curTime < runTime:
+        # you can end the simulation by pressing 'q'. This triggers an event which is also passed into the world loop
+        try:
+            quitevent = next(evt for evt in pygame.event.get(
+            ) if evt.type == pygame.KEYDOWN and evt.key == pygame.K_q)
+            userExit.set()
+            pygame.quit()
+            # sys.exit()
+        # event queue had no 'q' keyboard events. Continue.
+        except StopIteration:
+            pygame.event.get()
+            values = copy.copy(outputValues)
+            if 'time' in values and len(values['time']) > 0 and curTime != values['time'][-1]:
+                # try:
+                # print("curTime: {0}, world.time: {1}".format(
+                #    curTime, values['time'][-1]))
+
+                # naive: redraw the entire map each time step. This could be improved by saving a list of squares
+                # to redraw and being incremental, but there is a fair amount of bookkeeping involved.
+                displayedBackground.fill(pygame.Color(255, 255, 255))
+
+                for street in streets:
+                    pygame.draw.aaline(displayedBackground,
+                                       pygame.Color(128, 128, 128),
+                                       (round(street.nodeA[0]*meshSize[0]+meshSize[0]/2),
+                                        round(street.nodeA[1]*meshSize[1]+meshSize[1]/2)),
+                                       (round(street.nodeB[0]*meshSize[0]+meshSize[0]/2), round(street.nodeB[1]*meshSize[1]+meshSize[1]/2)))
+
+                for jct in range(len(junctionIdxs)):
+                    jctSquares[jct].fill(pygame.Color(192, 192, 192))
+                    pygame.draw.rect(jctSquares[jct], pygame.Color(128, 128, 128), pygame.Rect(
+                        0, 0, round(meshSize[0]/2), round(meshSize[1]/2)), 5)
+
+                # draw any custom objects for debug purposes
+                if False:
+                    customDrawAddress1 = (40, 0)
+                    customDrawAddress2 = (49, 15)
+
+                    pygame.draw.circle(drawPositions[customDrawAddress1[0]][customDrawAddress1[1]],
+                                       pygame.Color(100, 100, 0),
+                                       (round(meshSize[0]/2),
+                                        round(meshSize[1]/2)),
+                                       round(meshSize[0]/2), 3)
+                    pygame.draw.circle(drawPositions[customDrawAddress2[0]][customDrawAddress2[1]],
+                                       pygame.Color(100, 100, 0),
+                                       (round(meshSize[0]/2),
+                                        round(meshSize[1]/2)),
+                                       round(meshSize[0]/2), 3)
+
+                # get fares and taxis that need to be redrawn. We find these by checking the recording dicts
+                # for time points in advance of our current display timepoint. The nested comprehensions
+                # look formidable, but are simply extracting members with a time stamp ahead of our
+                # most recent display time. The odd indexing fare[1].keys()[-1] gets the last element
+                # in the time sequence dictionary for a fare (or taxi), which, because of the way this
+                # is recorded, is guaranteed to be the most recent entry.
+                faresToRedraw = dict([(fare[0], dict([(time[0], time[1])
+                                                      for time in fare[1].items()
+                                                      if time[0] > curTime]))
+                                      for fare in values['fares'].items()
+                                      if sorted(list(fare[1].keys()))[-1] > curTime])
+
+                taxisToRedraw = dict([(taxi[0], dict([(taxiPos[0], taxiPos[1])
+                                                      for taxiPos in taxi[1].items()
+                                                      if taxiPos[0] > curTime]))
+                                      for taxi in values['taxis'].items()
+                                      if sorted(list(taxi[1].keys()))[-1] > curTime])
+
+                # some taxis are on duty?
+                if len(taxisToRedraw) > 0:
+                    for taxi in taxisToRedraw.items():
+                        # new ones should be assigned a colour
+                        if taxi[0] not in taxiColours and len(taxiPalette) > 0:
+                            taxiColours[taxi[0]] = taxiPalette.pop(0)
+                        # but only plot taxis up to the palette limit (which can be easily extended)
+                        if taxi[0] in taxiColours:
+                            newestTime = sorted(list(taxi[1].keys()))[-1]
+                            # a taxi shows up as a circle in its colour
+                            pygame.draw.circle(drawPositions[taxi[1][newestTime][0]][taxi[1][newestTime][1]],
+                                               taxiColours[taxi[0]],
+                                               (round(meshSize[0]/2),
+                                                round(meshSize[1]/2)),
+                                               round(meshSize[0]/3))
+                        if taxi[0] in values['taxiPaths']:
+                            # 2021-11-15: draw current path
+                            path = values['taxiPaths'][taxi[0]]
+                            for node, nextNode in zip(path, path[1:]):
+                                pygame.draw.line(displayedBackground,
+                                                 taxiColours[taxi[0]],
+                                                 (round(node[0]*meshSize[0]+meshSize[0]/2),
+                                                  round(node[1]*meshSize[1]+meshSize[1]/2)),
+                                                 (round(nextNode[0]*meshSize[0]+meshSize[0]/2),
+                                                  round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
+                else:
+                    # no taxis out!
+                    print("No taxis out at time {0}".format(curTime))
+
+                # some fares still awaiting a taxi?
+                if len(faresToRedraw) > 0:
+                    for fare in faresToRedraw.items():
+                        newestFareTime = sorted(list(fare[1].keys()))[-1]
+                        # fares are plotted as orange triangles (using pygame's points representation which
+                        # is relative to the rectangular surface on which you are drawing)
+                        pygame.draw.polygon(drawPositions[fare[0][0]][fare[0][1]],
+                                            pygame.Color(255, 128, 0),
+                                            [(meshSize[0]/2, meshSize[1]/4),
+                                            (meshSize[0]/2-math.cos(math.pi/6)*meshSize[1]/4,
+                                                meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4),
+                                            (meshSize[0]/2+math.cos(math.pi/6)*meshSize[1]/4, meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4)])
+                # new: render text onto the screen.
+                # Debug and useful info will be printed onto the screen each update.
+                displayedTextArea.fill(pygame.Color(40, 40, 40))
+
+                whiteText = (210, 210, 210)
+                redText = (210, 50, 30)
+                greenText = (50, 210, 30)
+                lineSpacing = boldFontSize + 1
+                dataLabelXOffset = 185
+                labels = []
+
+                def addLabel(label="", datum="", labelColor=whiteText, datumColor=greenText):
+                    # doesn't need to be a function, but it will enforce line spacings :)
+                    labelImg = boldFont.render(label, 1, labelColor)
+                    datumImg = normalFont.render(datum, 1, datumColor)
+                    labels.append((labelImg, datumImg))
+                    return None
+
+                ts = time.time()
+                dateStamp = datetime.datetime.fromtimestamp(
+                    ts).strftime('%Y-%m-%d %H:%M:%S')
+
+                addLabel("RoboUber")
+                addLabel("IRL time: ", "{0}".format(dateStamp))
+                addLabel("Game time: ", "{0}".format(curTime))
+                addLabel("Taxis on duty: ", "{0}".format(len(taxisToRedraw)))
+                addLabel("Fares to pickup: ", "{0}".format(len(faresToRedraw)))
+                addLabel("Fares completed: ", "{0}".format(
+                    values['completedFares']))
+                addLabel("Fares cancelled: ", "{0}".format(
+                    values['cancelledFares']))
+                addLabel("Dispatch revenue: ", "£{0}".format(
+                    round(values['dispatcherRevenue'], 2)))
+                addLabel()
+                addLabel("Map Details:")
+                addLabel("Streets: ", "{0}".format(
+                    len(streets)), whiteText, whiteText)
+                addLabel("Junctions: ", "{0}".format(
+                    len(junctionIdxs)), whiteText, whiteText)
+
+                labelsDrawn = 0
+                for label in labels:
+                    displayedTextArea.blit(
+                        label[0], (10, 10 + (lineSpacing * labelsDrawn)))
+                    displayedTextArea.blit(
+                        label[1], (dataLabelXOffset, 10 + (lineSpacing * labelsDrawn)))
+                    labelsDrawn += 1
+
+                #  redraw the whole map
+                displaySurface.blit(displayedBackground, activeRect)
+                displaySurface.blit(displayedTextArea, textRect)
+                pygame.display.flip()
+
+                # reactivate to save images. Will need fiddling with in Linux.
+                if curTime % 100 == 0 and False:
+                    if os.name == 'nt':
+                        # If system is Windows
+                        pygame.image.save(displayedBackground,
+                                          "D:\Temp\img\{0}.png".format(str(curTime)))
+                    else:
+                        pygame.image.save(displayedBackground,
+                                          "img/{0}.png".format(str(curTime)))
+                if curTime % 100 == 0 and False:
+                    # with plt.xkcd():
+                    # plt.axis([40, 160, 0, 0.03])
+                    # plt.grid(True)
+                    hist = plt.hist(values['historicPathLengths'])
+                    if curTime == 0:
+                        plt.xlabel('Steps')
+                        plt.ylabel('Frequency')
+                        plt.title(
+                            'Frequency of travel distances (deepening ply)')
+                        plt.ion()
+                        # plt.show()
+                    else:
+                        pass
+                        # plt.draw()
+
+                    canvas = agg.FigureCanvasAgg(hist)
+                    canvas.draw()
+                    renderer = canvas.get_renderer()
+                    raw_data = renderer.tostring_rgb()
+
+                if curTime == 100:
+                    print("========================================")
+                    print("========================================")
+                    print("")
+                    print("Time: {0}".format(curTime))
+                    print("Calls: {0}".format(values['calls']))
+                    print("Steps: {0}".format(values['steps']))
+                    print("")
+                    print("========================================")
+                    print("========================================")
+
+                # advance the time
+                # except RuntimeError:
+                #    print(
+                #       "Screen Printing error - skipping time {0}".format(curTime))
+                curTime += 1
+            # elif len(values['time']) > 0 and curTime == values['time'][-1]:
+            #    curTime += 1
 else:
-    displayUI
-    # assume this is a batch run. Create more threads.
+    # assume this is a batch run. run multiple threads, start a curses session.
     for i, thread in enumerate(roboUberThreads, start=1):
         thread.start()
         print(
@@ -433,9 +657,13 @@ else:
     width = 40
     win = curses.newwin(height, width, beginY, beginX)
 
-    #progressCounter = 10
-    #remainingCounter = 90
-    while roboUber.is_alive():
+    def threadsAlive(threads):
+        isAlive = False
+        for thread in threads:
+            isAlive = isAlive or thread.is_alive()
+        return isAlive
+
+    while threadsAlive(roboUberThreads):
         linesUsed = 0
         threadCount = 0
         for i, thread in enumerate(roboUberThreads):
@@ -462,12 +690,6 @@ else:
                 linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
             stdscr.addstr(
                 linesUsed + 1, len(completeString + "| $"), str(int(outputValuesArray[i]['dispatcherRevenue'])), curses.color_pair(3))
-
-            if False:
-                #+ "| $" + str(int(outputValuesArray[i]['dispatcherRevenue']))
-                if linesUsed <= maxLines:
-                    stdscr.addstr(
-                        linesUsed + 1, 0, completeString, curses.color_pair(1))
 
             if thread.is_alive:
                 threadCount += 1
@@ -496,220 +718,3 @@ else:
         thread.join()
         print("{0} - Thread {1} rejoined.".format(
             dateStamp(), i))
-
-
-# this is the display loop which updates the on-screen output.
-while curTime < runTime and displayUI:
-    # you can end the simulation by pressing 'q'. This triggers an event which is also passed into the world loop
-    try:
-        quitevent = next(evt for evt in pygame.event.get(
-        ) if evt.type == pygame.KEYDOWN and evt.key == pygame.K_q)
-        userExit.set()
-        pygame.quit()
-        # sys.exit()
-    # event queue had no 'q' keyboard events. Continue.
-    except StopIteration:
-        pygame.event.get()
-        values = copy.copy(outputValues)
-        if 'time' in values and len(values['time']) > 0 and curTime != values['time'][-1]:
-            # try:
-            # print("curTime: {0}, world.time: {1}".format(
-            #    curTime, values['time'][-1]))
-
-            # naive: redraw the entire map each time step. This could be improved by saving a list of squares
-            # to redraw and being incremental, but there is a fair amount of bookkeeping involved.
-            displayedBackground.fill(pygame.Color(255, 255, 255))
-
-            for street in streets:
-                pygame.draw.aaline(displayedBackground,
-                                   pygame.Color(128, 128, 128),
-                                   (round(street.nodeA[0]*meshSize[0]+meshSize[0]/2),
-                                    round(street.nodeA[1]*meshSize[1]+meshSize[1]/2)),
-                                   (round(street.nodeB[0]*meshSize[0]+meshSize[0]/2), round(street.nodeB[1]*meshSize[1]+meshSize[1]/2)))
-
-            for jct in range(len(junctionIdxs)):
-                jctSquares[jct].fill(pygame.Color(192, 192, 192))
-                pygame.draw.rect(jctSquares[jct], pygame.Color(128, 128, 128), pygame.Rect(
-                    0, 0, round(meshSize[0]/2), round(meshSize[1]/2)), 5)
-
-            # draw any custom objects for debug purposes
-            customDrawAddress1 = (40, 0)
-            customDrawAddress2 = (49, 15)
-
-            pygame.draw.circle(drawPositions[customDrawAddress1[0]][customDrawAddress1[1]],
-                               pygame.Color(100, 100, 0),
-                               (round(meshSize[0]/2),
-                                round(meshSize[1]/2)),
-                               round(meshSize[0]/2), 3)
-            pygame.draw.circle(drawPositions[customDrawAddress2[0]][customDrawAddress2[1]],
-                               pygame.Color(100, 100, 0),
-                               (round(meshSize[0]/2),
-                                round(meshSize[1]/2)),
-                               round(meshSize[0]/2), 3)
-
-            # customLocationAddress =
-            # with open('explored.json', 'r') as file:
-            #    explored = json.loads(file.read())
-            #    print("")
-
-            # get fares and taxis that need to be redrawn. We find these by checking the recording dicts
-            # for time points in advance of our current display timepoint. The nested comprehensions
-            # look formidable, but are simply extracting members with a time stamp ahead of our
-            # most recent display time. The odd indexing fare[1].keys()[-1] gets the last element
-            # in the time sequence dictionary for a fare (or taxi), which, because of the way this
-            # is recorded, is guaranteed to be the most recent entry.
-            faresToRedraw = dict([(fare[0], dict([(time[0], time[1])
-                                                  for time in fare[1].items()
-                                                  if time[0] > curTime]))
-                                  for fare in values['fares'].items()
-                                  if sorted(list(fare[1].keys()))[-1] > curTime])
-
-            taxisToRedraw = dict([(taxi[0], dict([(taxiPos[0], taxiPos[1])
-                                                  for taxiPos in taxi[1].items()
-                                                  if taxiPos[0] > curTime]))
-                                  for taxi in values['taxis'].items()
-                                  if sorted(list(taxi[1].keys()))[-1] > curTime])
-
-            # some taxis are on duty?
-            if len(taxisToRedraw) > 0:
-                for taxi in taxisToRedraw.items():
-                    # new ones should be assigned a colour
-                    if taxi[0] not in taxiColours and len(taxiPalette) > 0:
-                        taxiColours[taxi[0]] = taxiPalette.pop(0)
-                    # but only plot taxis up to the palette limit (which can be easily extended)
-                    if taxi[0] in taxiColours:
-                        newestTime = sorted(list(taxi[1].keys()))[-1]
-                        # a taxi shows up as a circle in its colour
-                        pygame.draw.circle(drawPositions[taxi[1][newestTime][0]][taxi[1][newestTime][1]],
-                                           taxiColours[taxi[0]],
-                                           (round(meshSize[0]/2),
-                                            round(meshSize[1]/2)),
-                                           round(meshSize[0]/3))
-                    if taxi[0] in values['taxiPaths']:
-                        # 2021-11-15: draw current path
-                        path = values['taxiPaths'][taxi[0]]
-                        for node, nextNode in zip(path, path[1:]):
-                            pygame.draw.line(displayedBackground,
-                                             taxiColours[taxi[0]],
-                                             (round(node[0]*meshSize[0]+meshSize[0]/2),
-                                                 round(node[1]*meshSize[1]+meshSize[1]/2)),
-                                             (round(nextNode[0]*meshSize[0]+meshSize[0]/2),
-                                                 round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
-            else:
-                # no taxis out!
-                print("No taxis out at time {0}".format(curTime))
-
-            # some fares still awaiting a taxi?
-            if len(faresToRedraw) > 0:
-                for fare in faresToRedraw.items():
-                    newestFareTime = sorted(list(fare[1].keys()))[-1]
-                    # fares are plotted as orange triangles (using pygame's points representation which
-                    # is relative to the rectangular surface on which you are drawing)
-                    pygame.draw.polygon(drawPositions[fare[0][0]][fare[0][1]],
-                                        pygame.Color(255, 128, 0),
-                                        [(meshSize[0]/2, meshSize[1]/4),
-                                        (meshSize[0]/2-math.cos(math.pi/6)*meshSize[1]/4,
-                                            meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4),
-                                        (meshSize[0]/2+math.cos(math.pi/6)*meshSize[1]/4, meshSize[1]/2+math.sin(math.pi/6)*meshSize[1]/4)])
-
-            # new: render text onto the screen.
-            # Debug and useful info will be printed onto the screen each update.
-            displayedTextArea.fill(pygame.Color(40, 40, 40))
-
-            whiteText = (210, 210, 210)
-            redText = (210, 50, 30)
-            greenText = (50, 210, 30)
-            lineSpacing = boldFontSize + 1
-            dataLabelXOffset = 185
-            labels = []
-
-            def addLabel(label="", datum="", labelColor=whiteText, datumColor=greenText):
-                # doesn't need to be a function, but it will enforce line spacings :)
-                labelImg = boldFont.render(label, 1, labelColor)
-                datumImg = normalFont.render(datum, 1, datumColor)
-                labels.append((labelImg, datumImg))
-                return None
-
-            ts = time.time()
-            dateStamp = datetime.datetime.fromtimestamp(
-                ts).strftime('%Y-%m-%d %H:%M:%S')
-
-            addLabel("RoboUber")
-            addLabel("IRL time: ", "{0}".format(dateStamp))
-            addLabel("Game time: ", "{0}".format(curTime))
-            addLabel("Taxis on duty: ", "{0}".format(len(taxisToRedraw)))
-            addLabel("Fares to pickup: ", "{0}".format(len(faresToRedraw)))
-            addLabel("Fares completed: ", "{0}".format(
-                values['completedFares']))
-            addLabel("Fares cancelled: ", "{0}".format(
-                values['cancelledFares']))
-            addLabel("Dispatch revenue: ", "£{0}".format(
-                round(values['dispatcherRevenue'], 2)))
-            addLabel()
-            addLabel("Map Details:")
-            addLabel("Streets: ", "{0}".format(
-                len(streets)), whiteText, whiteText)
-            addLabel("Junctions: ", "{0}".format(
-                len(junctionIdxs)), whiteText, whiteText)
-
-            labelsDrawn = 0
-            for label in labels:
-                displayedTextArea.blit(
-                    label[0], (10, 10 + (lineSpacing * labelsDrawn)))
-                displayedTextArea.blit(
-                    label[1], (dataLabelXOffset, 10 + (lineSpacing * labelsDrawn)))
-                labelsDrawn += 1
-
-            #  redraw the whole map
-            displaySurface.blit(displayedBackground, activeRect)
-            displaySurface.blit(displayedTextArea, textRect)
-            pygame.display.flip()
-
-            # reactivate to save images. Will need fiddling with in Linux.
-            if curTime % 100 == 0 and False:
-                if os.name == 'nt':
-                    # If system is Windows
-                    pygame.image.save(displayedBackground,
-                                      "D:\Temp\img\{0}.png".format(str(curTime)))
-                else:
-                    pygame.image.save(displayedBackground,
-                                      "img/{0}.png".format(str(curTime)))
-            if curTime % 100 == 0 and False:
-                # with plt.xkcd():
-                # plt.axis([40, 160, 0, 0.03])
-                # plt.grid(True)
-                hist = plt.hist(values['historicPathLengths'])
-                if curTime == 0:
-                    plt.xlabel('Steps')
-                    plt.ylabel('Frequency')
-                    plt.title(
-                        'Frequency of travel distances (deepening ply)')
-                    plt.ion()
-                    # plt.show()
-                else:
-                    pass
-                    # plt.draw()
-
-                canvas = agg.FigureCanvasAgg(hist)
-                canvas.draw()
-                renderer = canvas.get_renderer()
-                raw_data = renderer.tostring_rgb()
-
-            if curTime == 100:
-                print("========================================")
-                print("========================================")
-                print("")
-                print("Time: {0}".format(curTime))
-                print("Calls: {0}".format(values['calls']))
-                print("Steps: {0}".format(values['steps']))
-                print("")
-                print("========================================")
-                print("========================================")
-
-            # advance the time
-            # except RuntimeError:
-            #    print(
-            #       "Screen Printing error - skipping time {0}".format(curTime))
-            curTime += 1
-        # elif len(values['time']) > 0 and curTime == values['time'][-1]:
-        #    curTime += 1
