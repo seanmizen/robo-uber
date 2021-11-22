@@ -287,7 +287,7 @@ roboUber = threading.Thread(target=runRoboUber,
 
 roboUberThreads = [roboUber]
 # index 0 reserved for default thread
-for i in range(1, 8):
+for i in range(1, 10):
     outputValuesArray.append(copy.deepcopy(outputValuesTemplate))
     roboUberThreads.append(threading.Thread(target=runRoboUber,
                                             name='RoboUberThread',
@@ -418,6 +418,10 @@ else:
 
     # threads will now be running. set up a curses terminal session.
     stdscr = curses.initscr()
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.noecho()
     curses.cbreak()
     stdscr.keypad(1)
@@ -435,18 +439,36 @@ else:
         linesUsed = 0
         threadCount = 0
         for i, thread in enumerate(roboUberThreads):
-
-            #progressCounter = outputValuesArray[i]['dispatcherRevenue']
-            progressCounter = int(
-                100 * (outputValuesArray[i]['time'][-1] / runTime))
+            if i > maxLines:
+                next
+            progressCounter = 0
+            if len(outputValuesArray[i]['time']) > 0:
+                progressCounter = int(
+                    100 * (outputValuesArray[i]['time'][-1] / runTime))
 
             # width 100 progress bar
-            completeString = "|" + ("#" * progressCounter) + \
-                (" " * (100 - progressCounter)) + "| $" + \
-                str(int(outputValuesArray[i]['dispatcherRevenue']))
-            if linesUsed <= maxLines:
+            completeString = ("#" * progressCounter) + \
+                (" " * (100 - progressCounter))
+
+            stdscr.addstr(
+                linesUsed + 1, 0, "|", curses.color_pair(1))
+            if progressCounter < 99:
                 stdscr.addstr(
-                    linesUsed + 1, 0, completeString)
+                    linesUsed + 1, 1, completeString, curses.color_pair(2))
+            else:
+                stdscr.addstr(
+                    linesUsed + 1, 1, completeString, curses.color_pair(3))
+            stdscr.addstr(
+                linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
+            stdscr.addstr(
+                linesUsed + 1, len(completeString + "| $"), str(int(outputValuesArray[i]['dispatcherRevenue'])), curses.color_pair(3))
+
+            if False:
+                #+ "| $" + str(int(outputValuesArray[i]['dispatcherRevenue']))
+                if linesUsed <= maxLines:
+                    stdscr.addstr(
+                        linesUsed + 1, 0, completeString, curses.color_pair(1))
+
             if thread.is_alive:
                 threadCount += 1
             linesUsed += 1
