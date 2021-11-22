@@ -178,7 +178,7 @@ class Taxi:
             self._nextLoc = onDutyPose[0]
             self._nextDirection = onDutyPose[1]
 
-    # c1 lockTick should handle all the non-driving behaviour, turn selection, stopping, etc. Drive automatically
+    # clockTick should handle all the non-driving behaviour, turn selection, stopping, etc. Drive automatically
     # stops once it reaches its next location so that if continuing on is desired, clockTick has to select
     # that action explicitly. This can be done using the turn and continueThrough methods of the node. Taxis
     # can collect fares using pickupFare, drop them off using dropoffFare, bid for fares issued by the Dispatcher
@@ -416,6 +416,10 @@ class Taxi:
         args['explored'][origin] = None
         # the actual path we are going to generate
         path = [origin]
+        if destination in path:
+            # exit early if this is the destination
+            return path
+
         # take the next node in the frontier, and expand it depth-wise
         if origin in self._map:
             # the frontier of unexplored paths (from this Node
