@@ -205,10 +205,10 @@ class Node:
         if self._fare_generator is None:
             if self._parent.size == 0:
                 # 1/1000 chance if there is no information on network size (approximately 1 call per day)
-                self._fare_generator = lambda t: numpy.random.random() > 0.999
+                self._fare_generator = lambda t: np.random.random() > 0.999
             else:
                 # otherwise default probability would generate on average 1 call every 100 minutes for the service area
-                self._fare_generator = lambda q: numpy.random.random() > 1 - 1 / \
+                self._fare_generator = lambda q: np.random.random() > 1 - 1 / \
                     (10*self._parent.size())
 
     # properties of the Node that other objects can see
@@ -890,10 +890,10 @@ class NetWorld:
         destinationNode = node
         while destinationNode == node or not destinationNode.canStop:
             destinationNode = list(self._net.values())[round(
-                numpy.random.uniform(0, len(self._net)-1))]
+                np.random.uniform(0, len(self._net)-1))]
         # fares will wait only for so long; a function of the distance to destination plus a gamma distribution
         maxWait = self.distance2Node(
-            node, destinationNode)*10 + 5*numpy.random.gamma(2.0, 1.0)
+            node, destinationNode)*10 + 5*np.random.gamma(2.0, 1.0)
         newFare = Fare(self, node, destinationNode, self._time, maxWait)
         # notify the Dispatcher, if any. If there is no Dispatcher yet, when it does come on-shift, it will
         # be notified of any pending Fares that it ought to dispatch, assuming they've not abandoned the attempt.

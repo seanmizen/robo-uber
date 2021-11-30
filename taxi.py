@@ -1,5 +1,5 @@
 import math
-import numpy
+import numpy as np
 import heapq
 
 # a data container object for the taxi's internal list of fares. This

@@ -65,7 +65,7 @@ outputValuesArray = [outputValues]
 def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, interpolate=False, outputValues=None, **args):
 
     if 'fareProbNormal' not in args:
-        args['fareProbNormal'] = lambda x: numpy.random.random() > 0.999
+        args['fareProbNormal'] = lambda x: np.random.random() > 0.999
     # create the NetWorld - the service area
     svcArea = networld.NetWorld(x=worldX, y=worldY, runtime=runTime,
                                 fareprob=args['fareProbNormal'], jctNodes=junctions, edges=streets, interpolateNodes=interpolate)
