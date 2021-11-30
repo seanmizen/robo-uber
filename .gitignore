@@ -1,3 +1,4 @@
 __pycache__/*.pyc
 numbers.csv
 .DS_Store
+Worlds/__pycache__/*.pyc

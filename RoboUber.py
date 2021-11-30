@@ -3,7 +3,6 @@ import pygame
 import threading
 import time
 import math
-import numpy
 # the 3 Python modules containing the RoboUber objects
 import networld
 import taxi
@@ -18,9 +17,6 @@ import curses
 import os
 # drawing on pygame
 # import matplotlib.backends.backend_agg as agg
-
-tloc = threading.local()
-
 
 # import matplotlib
 # Note: plt.savefig('foo.png', bbox_inches='tight')
@@ -43,7 +39,7 @@ displaySize = (1024, 768)
 # trafficOn = True
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
 threadsToUse = 10
 
@@ -539,15 +535,15 @@ else:
             progressCounter = 0
             if len(outputValuesArray[i]['time']) > 0:
                 progressCounter = int(
-                    100 * (outputValuesArray[i]['time'][-1] / runTime))
+                    50 * (outputValuesArray[i]['time'][-1] / runTime))
 
             # width 100 progress bar
             completeString = ("#" * progressCounter) + \
-                (" " * (100 - progressCounter))
+                (" " * (50 - progressCounter))
 
             stdscr.addstr(
                 linesUsed + 1, 0, "|", curses.color_pair(1))
-            if progressCounter < 99:
+            if progressCounter < 49:
                 stdscr.addstr(
                     linesUsed + 1, 1, completeString, curses.color_pair(2))
             else:

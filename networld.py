@@ -1,6 +1,6 @@
 import math
 from threading import currentThread
-import numpy
+import numpy as np
 import heapq
 
 from taxi import Taxi
