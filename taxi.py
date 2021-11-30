@@ -382,6 +382,7 @@ class Taxi:
 
         path = [origin]
         if destination in path:
+            # bug fix
             # exit early if this is the destination
             return path
 
@@ -417,6 +418,7 @@ class Taxi:
         # the actual path we are going to generate
         path = [origin]
         if destination in path:
+            # bug fix
             # exit early if this is the destination
             return path
 
