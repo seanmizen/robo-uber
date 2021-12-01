@@ -1005,12 +1005,12 @@ class NetWorld:
         outputs['historicPathLengths'] = []
         outputs['calls'] = 0
         outputs['steps'] = 0
-
+        #outputs['taxiPaths'] = {}
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
             outputs['cancelledFares'] = self._cancelledFares
             outputs['completedFares'] = self._completedFares
             outputs['dispatcherRevenue'] = self._dispatcherRevenue
-            outputs['taxiPaths'] = {}
+
             # print(
             #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
@@ -1038,11 +1038,14 @@ class NetWorld:
                         outputs['nodes'][node.index] = {
                             self._time: node.traffic}
             # next go through the (live) taxis
-            outputs['calls'] = 0
-            outputs['steps'] = 0
+            if self._time % 50 == 0:
+                outputs['calls'] = 0
+                outputs['steps'] = 0
             for taxi in self._taxis.items():
-                outputs['calls'] += taxi[0].calls
-                outputs['steps'] += taxi[0].steps
+                if self._time % 50 == 0:
+                    outputs['calls'] += taxi[0].calls
+                    outputs['steps'] += taxi[0].steps
+                outputs['timeAtBanktrupcy'][taxi[0].number] = taxi[0]._timeAtBankruptcy
                 if taxi[0].onDuty:
                     taxi[0].drive(taxi[1])
                     taxi[0].clockTick(self)
@@ -1055,7 +1058,13 @@ class NetWorld:
                         else:
                             outputs['taxis'][taxi[0].number] = {
                                 self._time: taxi[0].currentLocation}
-                        outputs['taxiPaths'][taxi[0].number] = taxi[0]._path
+
+                    if taxi[0].number in outputs['taxiPaths']:
+                        outputs['taxiPaths'][taxi[0].number][self._time] = taxi[0]._path
+                    else:
+                        outputs['taxiPaths'][taxi[0].number] = {
+                            self._time: taxi[0]._path}
+
                 # an off-duty taxi can come on if it decides to (and will call addTaxi to add itself)
                 else:
                     taxi[0].comeOnDuty(self._time)

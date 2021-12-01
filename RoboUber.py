@@ -1,12 +1,7 @@
 import worldselector
 import pygame
 import threading
-import time
 import math
-# the 3 Python modules containing the RoboUber objects
-import networld
-import taxi
-import dispatcher
 import time
 import datetime
 import json
@@ -15,8 +10,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import curses
 import os
-# drawing on pygame
-# import matplotlib.backends.backend_agg as agg
+# the 3 Python modules containing the RoboUber objects
+import networld
+import taxi
+import dispatcher
 
 # import matplotlib
 # Note: plt.savefig('foo.png', bbox_inches='tight')
@@ -30,13 +27,13 @@ import os
 # basic parameters
 worldX = 50
 worldY = 50
-runTime = 1440 * 2
+runTime = 1440
 # displayedTextArea will use displaySize[1] for height - only specify a width here
 displayedTextAreaWidth = 400
 boldFontSize = 16
 normalFontSize = 15
 displaySize = (1024, 768)
-# trafficOn = True
+trafficOn = False
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
 displayUI = False
@@ -54,7 +51,7 @@ world = worldselector.export()
 #    'fareProbNormal': fareProbNormal,
 
 outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
-                        'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': [], 'historicPathLengths': []}
+                        'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}}
 outputValues = copy.deepcopy(outputValuesTemplate)
 outputValuesArray = [outputValues]
 
@@ -117,13 +114,15 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
             threadRunTime = 0
         else:
             svcArea.runWorld(
-                ticks=tickSetting, outputs=outputValuesArray[args['threadIdentifier']])
+                ticks=tickSetting, outputs=outputValues)
             # if (outputValues['time'][-1] % 5 == 0):
             #    print("Time: {0}, Fares: {1}, Taxis: {2}".format(
             #        outputValues['time'][-1], len(outputValues['fares']), len(outputValues['taxis'])))
             if threadTime != svcArea.simTime:
                 threadTime += 1
-            time.sleep(0.01)  # !! was 1
+            if tickSetting != 0:
+                time.sleep(0.05)  # !! was 1
+            # ticks 1: displayUI
 
     # print(str(round(svcArea._dispatcherRevenue * 10, 2)))
 
@@ -371,7 +370,7 @@ if displayUI:
                                                round(meshSize[0]/3))
                         if taxi[0] in values['taxiPaths']:
                             # 2021-11-15: draw current path
-                            path = values['taxiPaths'][taxi[0]]
+                            path = values['taxiPaths'][taxi[0]][curTime]
                             for node, nextNode in zip(path, path[1:]):
                                 pygame.draw.line(displayedBackground,
                                                  taxiColours[taxi[0]],
@@ -381,7 +380,27 @@ if displayUI:
                                                   round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
                 else:
                     # no taxis out!
-                    print("No taxis out at time {0}".format(curTime))
+                    if 'timeAtBanktrupcy' in values:
+                        print("========================================")
+                        print("========================================")
+                        print("")
+                        bankruptcyTimes = list(
+                            values['timeAtBanktrupcy'].values())
+                        print("Bankrupt Taxis: {3}\n Average TTB: {0}\n Min bankruptcy: {1}\n Max bankruptcy: {2}".format(
+                            int(sum(bankruptcyTimes) / len(bankruptcyTimes)), min(bankruptcyTimes), max(bankruptcyTimes), str(bankruptcyTimes)))
+                        print("")
+                        print("========================================")
+                        print("========================================")
+                        print("")
+                        print("Time: {0}".format(curTime))
+                        print("Calls: {0}".format(values['calls']))
+                        print("Steps: {0}".format(values['steps']))
+                        print("")
+                        print("========================================")
+                        print("========================================")
+
+                    else:
+                        print("No taxis out at time {0}".format(curTime))
 
                 # some fares still awaiting a taxi?
                 if len(faresToRedraw) > 0:
@@ -478,7 +497,7 @@ if displayUI:
                     renderer = canvas.get_renderer()
                     raw_data = renderer.tostring_rgb()
 
-                if curTime == 100:
+                if False and curTime == 100:
                     print("========================================")
                     print("========================================")
                     print("")
@@ -551,10 +570,34 @@ else:
                     linesUsed + 1, 1, completeString, curses.color_pair(3))
             stdscr.addstr(
                 linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
+            completeString = completeString + "| $"
+            nextString = (
+                str(int(outputValuesArray[i]['dispatcherRevenue'])) + "     ")[:5]
             stdscr.addstr(
-                linesUsed + 1, len(completeString + "| $"), str(int(outputValuesArray[i]['dispatcherRevenue'])), curses.color_pair(3))
+                linesUsed + 1, len(completeString), nextString, curses.color_pair(3))
+            completeString = completeString + nextString
 
-            if thread.is_alive:
+            bankruptcyTimes = list(
+                outputValuesArray[i]['timeAtBanktrupcy'].values())
+            if len(bankruptcyTimes) > 0:
+                avg = int(sum(bankruptcyTimes) / len(bankruptcyTimes))
+            else:
+                avg = 0
+            if 'steps' in outputValuesArray[i]:
+                steps = outputValuesArray[i]['steps']
+            else:
+                steps = 0
+
+            lastString = " attb: " + \
+                (str(avg) + "    ")[:4] + \
+                " steps: " + (str(steps) + "      ")[:6]
+            stdscr.addstr(
+                linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
+            completeString = completeString + lastString
+            stdscr.addstr(
+                linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
+
+            if thread.is_alive():
                 threadCount += 1
             linesUsed += 1
 

@@ -77,6 +77,7 @@ class Taxi:
         self._direction = -1
         self._nextLoc = None
         self._nextDirection = -1
+        self._timeAtBankruptcy = 0
         # this contains a Fare (object) that the taxi has picked up. You use the functions pickupFare()
         # and dropOffFare() in a given Node to collect and deliver a fare
         self._passenger = None
@@ -185,6 +186,14 @@ class Taxi:
     # using transmitFareBid, and any other internal activity seen as potentially useful.
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
+
+        if self._account == 0:
+            # Only update bankruptcy time when taxi hits 0
+            # this allows a fare to save a taxi from bankruptcy
+            # but only if the fare payout gets account > 0 again.
+            # Register bankruptcy before the fare is dropped off
+            self._timeAtBankruptcy = self._world.simTime
+
         if self._account <= 0 and self._passenger is None:
             # print(
             #     "Loss too high. Taxi {0} is going off-duty".format(self.number))
@@ -346,7 +355,7 @@ class Taxi:
             returnVal = self._planPath_original(origin, destination, **args)
         if True:
             returnVal = self._iterativeDeepeningSearch(
-                origin, destination, **args)
+                origin, destination, 10, ** args)
         if False:
             returnVal = self._depthFirstSearch(
                 200, origin, destination, **args)
@@ -358,7 +367,7 @@ class Taxi:
 
         return returnVal
 
-    def _iterativeDeepeningSearch(self, origin, destination, **args):
+    def _iterativeDeepeningSearch(self, origin, destination, step=1, **args):
         # probabilistic depth-first search discounting traffic, etc
         self.calls += 1
         maxPly = 150
@@ -369,7 +378,7 @@ class Taxi:
             args['explored'] = {}
             args['explored'][origin] = None
             path = self._depthFirstSearch(ply, origin, destination, **args)
-            ply += 1
+            ply += step
 
         self.historicPathLengths.append(ply)
         return path
