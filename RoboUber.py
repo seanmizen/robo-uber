@@ -19,8 +19,6 @@ import dispatcher
 # Note: plt.savefig('foo.png', bbox_inches='tight')
 # https://stackoverflow.com/questions/9622163/save-plot-to-image-file-instead-of-displaying-it-using-matplotlib
 
-# create objects for RoboUber
-
 # TODO
 # experiment with parameter settings. worldX and worldY should not need to be
 # changed, but others are fair game!
@@ -36,9 +34,11 @@ displaySize = (1024, 768)
 trafficOn = False
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = False
+displayUI = True
 # only used if displayUI == False:
 threadsToUse = 10
+# only used if displayUI == True:
+timeSleep = 0.1
 
 world = worldselector.export()
 
@@ -121,7 +121,7 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
             if threadTime != svcArea.simTime:
                 threadTime += 1
             if tickSetting != 0:
-                time.sleep(0.05)  # !! was 1
+                time.sleep(timeSleep)
             # ticks 1: displayUI
 
     # print(str(round(svcArea._dispatcherRevenue * 10, 2)))

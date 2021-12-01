@@ -1,4 +1,5 @@
 import math
+#from typing_extensions import TypeVarTuple
 import numpy as np
 import heapq
 
@@ -27,8 +28,8 @@ class FareInfo:
     time they're willing to absorb, but beyond that, they go off duty since it seems to be a waste
     of time to stick around. Eventually, they might come back on duty, but it usually won't be for
     several hours. A Taxi also expects a map of the service area which forms part of its knowledge
-    base. Taxis start from some fixed location in the world. Note that they can't just 'appear' there:
-    any real Node in the world may have traffic (or other taxis!) there, and if its start node is
+    base. Taxis origin from some fixed location in the world. Note that they can't just 'appear' there:
+    any real Node in the world may have traffic (or other taxis!) there, and if its origin node is
     unavailable, the taxi won't enter the world until it is. Taxis collect revenue for fares, and
     each minute of active time, whether driving, idle, or conducting a fare, likewise costs them £1.
 '''
@@ -50,12 +51,12 @@ class Taxi:
          it would have lost 200, leaving it with only £56 to be able to absorb before going off-duty.
          max_wait - this is a heuristic the taxi can use to decide whether a fare is even worth bidding on.
          It is an estimate of how many minutes, on average, a fare is likely to wait to be collected.
-         on_duty_time - this says at what time the taxi comes on duty (default is 0, at the start of the
+         on_duty_time - this says at what time the taxi comes on duty (default is 0, at the origin of the
          simulation)
          off_duty_time - this gives the number of minutes the taxi will wait before returning to duty if
          it goes off (default is 0, never return)
          service_area - the world can optionally populate the taxi's map at creation time.
-         start_point - this gives the location in the network where the taxi will start. It should be an (x,y) tuple.
+         start_point - this gives the location in the network where the taxi will origin. It should be an (x,y) tuple.
          default is None which means the world will randomly place the Taxi somewhere on the edge of the service area.
       '''
 
@@ -187,6 +188,10 @@ class Taxi:
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
 
+        if self.number == 100 and self._world.simTime % 30 == 0:
+            a = 1
+            pass
+
         if self._account == 0:
             # Only update bankruptcy time when taxi hits 0
             # this allows a fare to save a taxi from bankruptcy
@@ -227,7 +232,7 @@ class Taxi:
                     # at the collection point for our next passenger?
                     if self._loc.index[0] == origin[0] and self._loc.index[1] == origin[1]:
                         self._passenger = self._loc.pickupFare(self._direction)
-                        # if a fare was collected, we can start to drive to their destination. If they
+                        # if a fare was collected, we can origin to drive to their destination. If they
                         # were not collected, that probably means the fare abandoned.
                         if self._passenger is not None:
                             self._path = self._planPath(
@@ -344,30 +349,26 @@ class Taxi:
     ''' HERE IS THE PART THAT YOU NEED TO MODIFY
       '''
 
-    # TODO
-    # this function should build your route and fill the _path list for each new
-    # journey. Below is a naive depth-first search implementation. You should be able
-    # to do much better than this!
+    # _planPath is now the selector method which chooses the pathfinder algorithm.
     def _planPath(self, origin, destination, **args):
         returnVal = []
 
         if False:
             returnVal = self._planPath_original(origin, destination, **args)
-        if True:
-            returnVal = self._iterativeDeepeningSearch(
-                origin, destination, 10, ** args)
         if False:
             returnVal = self._depthFirstSearch(
                 200, origin, destination, **args)
-        if False:
+        if True:
             returnVal = self._iterativeDeepeningSearch(
-                (49, 15), (40, 0), **args)
+                origin, destination, 10, False, ** args)
+        if False:
+            returnVal = self._aStarSearch(origin, destination, **args)
 
         args = None
 
         return returnVal
 
-    def _iterativeDeepeningSearch(self, origin, destination, step=1, **args):
+    def _iterativeDeepeningSearch(self, origin, destination, step=1, corridor=False, **args):
         # probabilistic depth-first search discounting traffic, etc
         self.calls += 1
         maxPly = 150
@@ -377,7 +378,11 @@ class Taxi:
             path = [origin]
             args['explored'] = {}
             args['explored'][origin] = None
-            path = self._depthFirstSearch(ply, origin, destination, **args)
+            if corridor:
+                path = self._depthFirstSearchCorridor(
+                    ply, origin, destination, **args)
+            else:
+                path = self._depthFirstSearch(ply, origin, destination, **args)
             ply += step
 
         self.historicPathLengths.append(ply)
@@ -391,7 +396,7 @@ class Taxi:
 
         path = [origin]
         if destination in path:
-            # bug fix
+            # bug fix for frontier nodes
             # exit early if this is the destination
             return path
 
@@ -416,6 +421,87 @@ class Taxi:
         # no need, therefore, to expand the path for the higher-level call, this is a dead end.
         return []
 
+    def _depthFirstSearchCorridor(self, ply, origin, destination, **args):
+        self.calls += 1
+        if 'explored' not in args:
+            args['explored'] = {}
+        args['explored'][origin] = None
+
+        path = [origin]
+        if destination in path:
+            # bug fix for frontier nodes
+            # exit early if this is the destination
+            return path
+
+        if origin in self._map and ply > 0:
+            frontier = [node for node in self._map[origin].keys()
+                        if node not in args['explored']]
+            # loop down a corridor (being careful to check for the goal!)
+            while len(frontier) == 1:
+                path = path + frontier
+                args['explored'][frontier[-1]] = None
+                if destination in path:
+                    return path
+                frontier = [node for node in self._map[frontier[-1]].keys()
+                            if node not in args['explored']]
+
+            for nextNode in frontier:
+                self.steps += 1
+                path = path + \
+                    self._depthFirstSearchCorridor(ply - 1, nextNode, destination,
+                                                   explored=args['explored'])
+                # stop early as soon as the destination has been found by any route.
+                if destination in path:
+                    return path
+        return []
+
+    def _aStarSearch(self, origin, destination, **args):
+        self.calls += 1
+        if 'explored' not in args:
+            args['explored'] = {}
+
+        if origin == destination:
+            # exit early if this is the destination
+            return [origin]
+
+        def heuristic(a, b):
+            return math.sqrt(
+                (a[0]-b[0])**2+(a[1]-b[1])**2)
+
+        # adapted from gridagents_solution.py
+        expanded = {heuristic(origin, destination): {origin: [origin]}}
+        while len(expanded) > 0:
+            self.steps += 1
+            bestPath = min(expanded.keys())
+            nextExpansion = expanded[bestPath]
+            if destination in nextExpansion:
+                return nextExpansion[destination]
+            nextNode = nextExpansion.popitem()
+            while len(nextExpansion) > 0 and nextNode[0] in args['explored']:
+                nextNode = nextExpansion.popitem()
+            if len(nextExpansion) == 0:
+                del expanded[bestPath]
+            if nextNode[0] not in args['explored']:
+                args['explored'][nextNode[0]] = None
+                expansionTargets = [
+                    node for node in self._map[nextNode[0]].items() if node[0] not in args['explored']]
+                while len(expansionTargets) > 0:
+                    self.steps += 1
+                    expTgt = expansionTargets.pop()
+                    estimatedDistance = bestPath - \
+                        heuristic(nextNode[0], destination) + \
+                        + heuristic(expTgt[0], destination)
+                    # estimatedDistance = bestPath - \
+                    #     heuristic(nextNode[0], destination) + \
+                    #     expTgt[1] + heuristic(expTgt[0], destination)
+                    if estimatedDistance in expanded:
+                        expanded[estimatedDistance][expTgt[0]
+                                                    ] = nextNode[1]+[expTgt[0]]
+                    else:
+                        expanded[estimatedDistance] = {
+                            expTgt[0]: nextNode[1]+[expTgt[0]]}
+        return []
+
     def _planPath_original(self, origin, destination, **args):
         self.calls += 1
         # the list of explored paths. Recursive invocations pass in explored as a parameter
@@ -427,7 +513,7 @@ class Taxi:
         # the actual path we are going to generate
         path = [origin]
         if destination in path:
-            # bug fix
+            # bug fix for frontier nodes
             # exit early if this is the destination
             return path
 
