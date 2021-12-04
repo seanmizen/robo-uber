@@ -188,7 +188,7 @@ class Taxi:
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
 
-        if self.number == 100 and self._world.simTime % 30 == 0:
+        if self.number == 100 and self._world.simTime % 30 == 12:
             a = 1
             pass
 
@@ -225,6 +225,13 @@ class Taxi:
                 # is the fare's originx, and fare[0][2] is the fare's originy, which we can use to
                 # build the location tuple.
                 origin = (fare[0][1], fare[0][2])
+
+                # SM - debugging
+
+                if self.number == 100:
+                    a = 1
+                    pass
+
                 # much more intelligent things could be done here. This simply naively takes the first
                 # allocated fare we have and plans a basic path to get us from where we are to where
                 # they are waiting.
@@ -268,6 +275,10 @@ class Taxi:
     # move the taxi on to the next Node once it gets the green light.
     def drive(self, newPose):
         # as long as we are not stopping here,
+        if self.number == 100 and self._path != []:
+            a = 1
+            pass
+
         if self._nextLoc is not None:
             # and we have the green light to proceed,
             if newPose[0] == self._nextLoc and newPose[1] == self._nextDirection:
@@ -358,11 +369,12 @@ class Taxi:
         if False:
             returnVal = self._depthFirstSearch(
                 200, origin, destination, **args)
-        if True:
-            returnVal = self._iterativeDeepeningSearch(
-                origin, destination, 10, False, ** args)
         if False:
-            returnVal = self._aStarSearch(origin, destination, **args)
+            returnVal = self._iterativeDeepeningSearch(
+                origin, destination, 1, True, ** args)
+        if True:
+            returnVal = self._aStarSearch(
+                origin, destination, self.euclideanDistance, **args)
 
         args = None
 
@@ -455,7 +467,11 @@ class Taxi:
                     return path
         return []
 
-    def _aStarSearch(self, origin, destination, **args):
+    def euclideanDistance(self, a, b):
+        return math.sqrt(
+            (a[0]-b[0])**2+(a[1]-b[1])**2)
+
+    def _aStarSearch(self, origin, destination, heuristic, **args):
         self.calls += 1
         if 'explored' not in args:
             args['explored'] = {}
@@ -463,10 +479,6 @@ class Taxi:
         if origin == destination:
             # exit early if this is the destination
             return [origin]
-
-        def heuristic(a, b):
-            return math.sqrt(
-                (a[0]-b[0])**2+(a[1]-b[1])**2)
 
         # adapted from gridagents_solution.py
         expanded = {heuristic(origin, destination): {origin: [origin]}}

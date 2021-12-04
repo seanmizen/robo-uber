@@ -1,6 +1,6 @@
 import networld
 import numpy
-trafficOn = True
+trafficOn = False
 
 
 def fareProbMagnet(m): return numpy.random.random() > 0.98
@@ -27,7 +27,7 @@ trafficSinkDrain = 4 if trafficOn else 0
 jct0 = networld.junctionDef(
     x=0, y=0, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct1 = networld.junctionDef(
-    x=20, y=0, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMinor)
+    x=20, y=0, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMajor)
 jct2 = networld.junctionDef(
     x=40, y=0, cap=2, canStop=True, src=trafficSrcMajor, sink=trafficSinkMajor)
 jct3 = networld.junctionDef(

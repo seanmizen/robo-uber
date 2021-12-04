@@ -1002,50 +1002,54 @@ class NetWorld:
             outputs = {}
         ticksRun = 0
 
-        outputs['historicPathLengths'] = []
-        outputs['calls'] = 0
-        outputs['steps'] = 0
-        #outputs['taxiPaths'] = {}
         while (ticks == 0 or ticksRun < ticks) and (self.runTime == 0 or self._time < self.runTime):
-            outputs['cancelledFares'] = self._cancelledFares
-            outputs['completedFares'] = self._completedFares
-            outputs['dispatcherRevenue'] = self._dispatcherRevenue
+            if 'cancelledFares' in outputs:
+                outputs['cancelledFares'] = self._cancelledFares
+            if 'completedFares' in outputs:
+                outputs['completedFares'] = self._completedFares
+            if 'dispatcherRevenue' in outputs:
+                outputs['dispatcherRevenue'] = self._dispatcherRevenue
 
-            # print(
-            #    "Current time in the simulation world: {0}".format(self._time))
             if 'time' in outputs:
                 outputs['time'].append(self._time)
             # really simple recording of fares: just where there are fares still waiting. More
             # sophisticated recording including price information and enroute fare information,
             # could easily be added, e.g. by making the fare output a list of fare objects.
+            # SM 2021-12-04: changed to full list of fare objects
             if 'fares' in outputs:
                 for fare in self._fareQ.values():
                     if fare.origin in outputs['fares']:
-                        outputs['fares'][fare.origin][self._time] = fare.calltime
+                        outputs['fares'][fare.origin][self._time] = fare
                     else:
                         outputs['fares'][fare.origin] = {
-                            self._time: fare.calltime}
+                            self._time: fare}
             # go through all the nodes and update the time tick
             for node in self._net.values():
                 node.clockTick(self)
                 # we can output live traffic information if we want. Or possibly other
                 # parameters of a node, depending on how much reporting is desirable. (With
-                # very large networks and lots of reporting, this could slow things considerably)
+                # svery large networks and lots of reporting, this could slow things considerably)
+                # SM: Added trafficMax to display Gridlock
                 if 'nodes' in outputs:
                     if node.index in outputs['nodes']:
-                        outputs['nodes'][node.index][self._time] = node.traffic
+                        outputs['nodes'][node.index][self._time] = (
+                            node.traffic, node.maxTraffic)
                     else:
                         outputs['nodes'][node.index] = {
-                            self._time: node.traffic}
+                            self._time: (node.traffic, node.maxTraffic)}
+
             # next go through the (live) taxis
-            if self._time % 50 == 0:
+            if 'calls' in outputs:
                 outputs['calls'] = 0
+            if 'steps' in outputs:
                 outputs['steps'] = 0
             for taxi in self._taxis.items():
-                if self._time % 50 == 0:
-                    outputs['calls'] += taxi[0].calls
-                    outputs['steps'] += taxi[0].steps
                 outputs['timeAtBanktrupcy'][taxi[0].number] = taxi[0]._timeAtBankruptcy
+                if 'calls' in outputs:
+                    outputs['calls'] += taxi[0].calls
+                if 'steps' in outputs:
+                    outputs['steps'] += taxi[0].steps
+
                 if taxi[0].onDuty:
                     taxi[0].drive(taxi[1])
                     taxi[0].clockTick(self)
@@ -1058,18 +1062,20 @@ class NetWorld:
                         else:
                             outputs['taxis'][taxi[0].number] = {
                                 self._time: taxi[0].currentLocation}
-
-                    if taxi[0].number in outputs['taxiPaths']:
-                        outputs['taxiPaths'][taxi[0].number][self._time] = taxi[0]._path
-                    else:
-                        outputs['taxiPaths'][taxi[0].number] = {
-                            self._time: taxi[0]._path}
+                    if 'taxiPaths' in outputs:
+                        if taxi[0].number in outputs['taxiPaths']:
+                            outputs['taxiPaths'][taxi[0].number][self._time] = taxi[0]._path
+                        else:
+                            outputs['taxiPaths'][taxi[0].number] = {
+                                self._time: taxi[0]._path}
 
                 # an off-duty taxi can come on if it decides to (and will call addTaxi to add itself)
                 else:
                     taxi[0].comeOnDuty(self._time)
-                outputs['historicPathLengths'].append(
-                    taxi[0].historicPathLengths)
+
+                if 'historicPathLengths' in outputs:
+                    outputs['historicPathLengths'].append(
+                        taxi[0].historicPathLengths)
             # then run the dispatcher. With this ordering, taxis bidding for fares can always get
             # them allocated immediately (provided the dispatcher decides to do so). Taxis always
             # receive notice of potential fares for collection one clock after the fare first appeared

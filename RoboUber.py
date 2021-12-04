@@ -31,14 +31,13 @@ displayedTextAreaWidth = 400
 boldFontSize = 16
 normalFontSize = 15
 displaySize = (1024, 768)
-trafficOn = False
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
 displayUI = True
 # only used if displayUI == False:
 threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.1
+timeSleep = 0.2
 
 world = worldselector.export()
 
@@ -50,8 +49,14 @@ world = worldselector.export()
 #    'fareProbSemiPopular': fareProbSemiPopular,
 #    'fareProbNormal': fareProbNormal,
 
-outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
-                        'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}}
+if displayUI:
+    outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
+                            'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}, 'nodes': {}, 'calls': 0, 'steps': 0}
+else:
+    # Run a reduced outputValues template - this will tell runWorld to store fewer values and increase speed.
+    outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
+                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0}
+    pass
 outputValues = copy.deepcopy(outputValuesTemplate)
 outputValuesArray = [outputValues]
 
@@ -98,11 +103,6 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
         # cheeky debug info area:
         # live fare dictionary: svcArea._dispatcher._fareBoard
         # all fares ever: outputValues['fares']
-        # print("fares: " + str(len(outputValues['fares'])))
-
-        # if threadTime == 50:
-        #    print(json.dumps(dict((str(k), v)
-        #                          for k, v in outputValues['fares'].items()), indent=2))
 
         # exit if 'q' has been pressed
         if 'ticks' in args:
@@ -299,10 +299,6 @@ if displayUI:
             pygame.event.get()
             values = copy.copy(outputValues)
             if 'time' in values and len(values['time']) > 0 and curTime != values['time'][-1]:
-                # try:
-                # print("curTime: {0}, world.time: {1}".format(
-                #    curTime, values['time'][-1]))
-
                 # naive: redraw the entire map each time step. This could be improved by saving a list of squares
                 # to redraw and being incremental, but there is a fair amount of bookkeeping involved.
                 displayedBackground.fill(pygame.Color(255, 255, 255))
@@ -320,20 +316,26 @@ if displayUI:
                         0, 0, round(meshSize[0]/2), round(meshSize[1]/2)), 5)
 
                 # draw any custom objects for debug purposes
-                if False:
-                    customDrawAddress1 = (40, 0)
-                    customDrawAddress2 = (49, 15)
 
-                    pygame.draw.circle(drawPositions[customDrawAddress1[0]][customDrawAddress1[1]],
-                                       pygame.Color(100, 100, 0),
+                def drawTraffic(address, colour, width=2):
+                    pygame.draw.circle(drawPositions[address[0]][address[1]],
+                                       pygame.Color(colour),
                                        (round(meshSize[0]/2),
                                         round(meshSize[1]/2)),
-                                       round(meshSize[0]/2), 3)
-                    pygame.draw.circle(drawPositions[customDrawAddress2[0]][customDrawAddress2[1]],
-                                       pygame.Color(100, 100, 0),
-                                       (round(meshSize[0]/2),
-                                        round(meshSize[1]/2)),
-                                       round(meshSize[0]/2), 3)
+                                       round(meshSize[0]/2), width)
+                # displaying traffic
+                if True:
+                    displayRed = (200, 0, 0)
+                    displayYellow = (200, 200, 0)
+                    displayGreen = (0, 200, 0)
+                    for node in values['nodes']:
+                        (traffic, maxTraffic) = values['nodes'][node][curTime]
+                        if traffic == maxTraffic:
+                            drawTraffic(node, displayRed, traffic)
+                        elif traffic > (maxTraffic/2):
+                            drawTraffic(node, displayYellow, traffic)
+                        elif traffic > 0:
+                            drawTraffic(node, displayGreen, traffic)
 
                 # get fares and taxis that need to be redrawn. We find these by checking the recording dicts
                 # for time points in advance of our current display timepoint. The nested comprehensions
@@ -380,27 +382,7 @@ if displayUI:
                                                   round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
                 else:
                     # no taxis out!
-                    if 'timeAtBanktrupcy' in values:
-                        print("========================================")
-                        print("========================================")
-                        print("")
-                        bankruptcyTimes = list(
-                            values['timeAtBanktrupcy'].values())
-                        print("Bankrupt Taxis: {3}\n Average TTB: {0}\n Min bankruptcy: {1}\n Max bankruptcy: {2}".format(
-                            int(sum(bankruptcyTimes) / len(bankruptcyTimes)), min(bankruptcyTimes), max(bankruptcyTimes), str(bankruptcyTimes)))
-                        print("")
-                        print("========================================")
-                        print("========================================")
-                        print("")
-                        print("Time: {0}".format(curTime))
-                        print("Calls: {0}".format(values['calls']))
-                        print("Steps: {0}".format(values['steps']))
-                        print("")
-                        print("========================================")
-                        print("========================================")
-
-                    else:
-                        print("No taxis out at time {0}".format(curTime))
+                    print("No taxis out at time {0}".format(curTime))
 
                 # some fares still awaiting a taxi?
                 if len(faresToRedraw) > 0:
@@ -497,21 +479,6 @@ if displayUI:
                     renderer = canvas.get_renderer()
                     raw_data = renderer.tostring_rgb()
 
-                if False and curTime == 100:
-                    print("========================================")
-                    print("========================================")
-                    print("")
-                    print("Time: {0}".format(curTime))
-                    print("Calls: {0}".format(values['calls']))
-                    print("Steps: {0}".format(values['steps']))
-                    print("")
-                    print("========================================")
-                    print("========================================")
-
-                # advance the time
-                # except RuntimeError:
-                #    print(
-                #       "Screen Printing error - skipping time {0}".format(curTime))
                 curTime += 1
             # elif len(values['time']) > 0 and curTime == values['time'][-1]:
             #    curTime += 1
@@ -572,7 +539,7 @@ else:
                 linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
             completeString = completeString + "| $"
             nextString = (
-                str(int(outputValuesArray[i]['dispatcherRevenue'])) + "     ")[:5]
+                str(round(10*outputValuesArray[i]['dispatcherRevenue'], 2)) + "       ")[:7]
             stdscr.addstr(
                 linesUsed + 1, len(completeString), nextString, curses.color_pair(3))
             completeString = completeString + nextString
@@ -580,7 +547,7 @@ else:
             bankruptcyTimes = list(
                 outputValuesArray[i]['timeAtBanktrupcy'].values())
             if len(bankruptcyTimes) > 0:
-                avg = int(sum(bankruptcyTimes) / len(bankruptcyTimes))
+                avg = sum(bankruptcyTimes) / len(bankruptcyTimes)
             else:
                 avg = 0
             if 'steps' in outputValuesArray[i]:
@@ -589,13 +556,13 @@ else:
                 steps = 0
 
             lastString = " attb: " + \
-                (str(avg) + "    ")[:4] + \
+                (str(avg) + "      ")[:6] + \
                 " steps: " + (str(steps) + "      ")[:6]
             stdscr.addstr(
                 linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
             completeString = completeString + lastString
-            stdscr.addstr(
-                linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
+            # stdscr.addstr(
+            #    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
 
             if thread.is_alive():
                 threadCount += 1
