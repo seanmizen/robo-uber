@@ -188,10 +188,6 @@ class Taxi:
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
 
-        if self.number == 100 and self._world.simTime % 30 == 12:
-            a = 1
-            pass
-
         if self._account == 0:
             # Only update bankruptcy time when taxi hits 0
             # this allows a fare to save a taxi from bankruptcy
@@ -225,12 +221,6 @@ class Taxi:
                 # is the fare's originx, and fare[0][2] is the fare's originy, which we can use to
                 # build the location tuple.
                 origin = (fare[0][1], fare[0][2])
-
-                # SM - debugging
-
-                if self.number == 100:
-                    a = 1
-                    pass
 
                 # much more intelligent things could be done here. This simply naively takes the first
                 # allocated fare we have and plans a basic path to get us from where we are to where
