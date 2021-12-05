@@ -265,9 +265,6 @@ class Taxi:
     # move the taxi on to the next Node once it gets the green light.
     def drive(self, newPose):
         # as long as we are not stopping here,
-        if self.number == 100 and self._path != []:
-            a = 1
-            pass
 
         if self._nextLoc is not None:
             # and we have the green light to proceed,
