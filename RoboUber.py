@@ -48,6 +48,7 @@ world = worldselector.export()
 #    'fareProbPopular': fareProbPopular,
 #    'fareProbSemiPopular': fareProbSemiPopular,
 #    'fareProbNormal': fareProbNormal,
+#    'taxis': taxis                                 (new)
 
 if displayUI:
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
@@ -76,16 +77,12 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
         args['serviceMap'] = svcMap
 
     # create some taxis
-    taxi0 = taxi.Taxi(world=svcArea, taxi_num=100,
-                      service_area=svcMap, start_point=(20, 0))
-    taxi1 = taxi.Taxi(world=svcArea, taxi_num=101,
-                      service_area=svcMap, start_point=(49, 15))
-    taxi2 = taxi.Taxi(world=svcArea, taxi_num=102,
-                      service_area=svcMap, start_point=(15, 49))
-    taxi3 = taxi.Taxi(world=svcArea, taxi_num=103,
-                      service_area=svcMap, start_point=(0, 35))
-
-    taxis = [taxi0, taxi1, taxi2, taxi3]
+    taxis = []
+    for argTaxi in args['taxis']:
+        # taxis expressed as a tuple of (id, (x, y))
+        newTaxi = taxi.Taxi(world=svcArea, taxi_num=argTaxi[0],
+                            service_area=svcMap, start_point=argTaxi[1])
+        taxis.append(newTaxi)
 
     # and a dispatcher
     dispatcher0 = dispatcher.Dispatcher(parent=svcArea, taxis=taxis)
@@ -159,7 +156,8 @@ roboUber = threading.Thread(target=runRoboUber,
                                     'fareProbSemiPopular': world['fareProbSemiPopular'],
                                     'fareProbNormal': world['fareProbNormal'],
                                     'threadIdentifier': 0,
-                                    'ticks': int(displayUI)})
+                                    'ticks': int(displayUI),
+                                    'taxis': world['taxis']})
 # ticks: int(displayUI) -- if UI, use ticks. otherwise, don't wait.
 
 roboUberThreads = [roboUber]
@@ -181,7 +179,8 @@ for i in range(1, threadsToUse):
                                                     'fareProbSemiPopular': world['fareProbSemiPopular'],
                                                     'fareProbNormal': world['fareProbNormal'],
                                                     'threadIdentifier': i,
-                                                    'ticks': 0}))
+                                                    'ticks': 0,
+                                                    'taxis': world['taxis']}))
 
 
 # start the simulation (which will automatically stop at the end of the run time)

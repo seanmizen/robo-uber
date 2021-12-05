@@ -139,6 +139,13 @@ streets = [strt0, strt1, strt2, strt3, strt4, strt5, strt6, strt7, strt8, strt9,
            strt16, strt17, strt18, strt19, strt20, strt21, strt22, strt23, strt24, strt25, strt26, strt27, strt28, strt29, strt30, strt31,
            strt32, strt33, strt34, strt35, strt36, strt37, strt38, strt39, strt40, strt41, strt42, strt43, strt44, strt45, strt46, strt47]
 
+# SM change: Make taxis part of the base scenario
+taxi0 = (100, (20, 0))
+taxi1 = (101, (49, 15))
+taxi2 = (102, (15, 49))
+taxi3 = (103, (0, 35))
+taxis = [taxi0, taxi1, taxi2, taxi3]
+
 
 def export():
     return {
@@ -148,4 +155,5 @@ def export():
         'fareProbMagnet': fareProbMagnet,
         'fareProbPopular': fareProbPopular,
         'fareProbSemiPopular': fareProbSemiPopular,
-        'fareProbNormal': fareProbNormal}
+        'fareProbNormal': fareProbNormal,
+        'taxis': taxis}
