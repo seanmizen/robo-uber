@@ -230,6 +230,15 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
+        if True:
+            self._allocateFare_Original(origin, destination, time)
+        if False:
+            pass
+
+    def _allocateFare_CSP1(self, origin, destination, time):
+        pass
+
+    def _allocateFare_Original(self, origin, destination, time):
         # a very simple approach here gives taxis at most 5 ticks to respond, which can
         # surely be improved upon.
         if self._parent.simTime-time > 5:
