@@ -33,11 +33,11 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
 threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.2
+timeSleep = 0.01
 
 world = worldselector.export()
 
@@ -79,7 +79,7 @@ def runRoboUber(worldX, worldY, runTime, stop, junctions=None, streets=None, int
     # create some taxis
     taxis = []
     for argTaxi in args['taxis']:
-        # taxis expressed as a tuple of (id, (x, y))
+        # taxis expressed as a tuple of (int id, (int x, int y))
         newTaxi = taxi.Taxi(world=svcArea, taxi_num=argTaxi[0],
                             service_area=svcMap, start_point=argTaxi[1])
         taxis.append(newTaxi)
