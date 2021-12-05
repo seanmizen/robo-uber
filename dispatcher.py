@@ -262,11 +262,11 @@ class Dispatcher:
                             if winnerNode is None or self._parent.distance2Node(bidderNode, fareNode) < self._parent.distance2Node(winnerNode, fareNode):
                                 allocatedTaxi = taxiIdx
                                 winnerNode = bidderNode
-                            else:
-                                # and after all that, we still have to check that somebody won, because any of the other reasons to invalidate
-                                # the auction may have occurred.
-                                if allocatedTaxi >= 0:
-                                    # but if so, allocate the taxi.
-                                    self._fareBoard[origin][destination][time].taxi = allocatedTaxi
-                                    self._parent.allocateFare(
-                                        origin, self._taxis[allocatedTaxi])
+                # BUG FIX SM 2021-12-05: un-indented this section so single-taxi worlds work.
+                # and after all that, we still have to check that somebody won, because any of the other reasons to invalidate
+                # the auction may have occurred.
+                if allocatedTaxi >= 0:
+                    # but if so, allocate the taxi.
+                    self._fareBoard[origin][destination][time].taxi = allocatedTaxi
+                    self._parent.allocateFare(
+                        origin, self._taxis[allocatedTaxi])
