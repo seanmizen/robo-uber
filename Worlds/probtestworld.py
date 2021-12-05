@@ -1,6 +1,6 @@
 import networld
 import numpy
-scenario = 1
+scenario = 3
 trafficOn = True
 
 n = 0
@@ -49,10 +49,12 @@ jct5 = networld.junctionDef(
 jct6 = networld.junctionDef(
     x=49, y=30, cap=2, canStop=True, fareProb=fareProbNormal)
 jct7 = networld.junctionDef(
-    x=25, y=25, cap=2, canStop=False, fareProb=fareProbZero)
+    x=22, y=25, cap=2, canStop=False, fareProb=fareProbZero)
 jct8 = networld.junctionDef(
-    x=10, y=20, cap=2, canStop=False, fareProb=fareProbZero)
+    x=28, y=25, cap=2, canStop=False, fareProb=fareProbZero)
 jct9 = networld.junctionDef(
+    x=10, y=20, cap=2, canStop=False, fareProb=fareProbZero)
+jct10 = networld.junctionDef(
     x=40, y=20, cap=2, canStop=False, fareProb=fareProbZero)
 
 # Scenario 1: No traffic
@@ -64,27 +66,27 @@ if scenario == 1:
 # jct 3 major traffic, significant sink
 if scenario == 2:
     jct3 = networld.junctionDef(
-        x=25, y=35, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSinkSignificant)
+        x=25, y=30, cap=2, canStop=False, src=trafficSrcHub, sink=trafficSinkSignificant)
 
 # Scenario 3: (Major traffic avoidance)
-# jct 3 hub traffic, major sink
-# jct 7 major traffic, significant sink
+# jct 3 hub traffic, significant sink
+# jct 7 major traffic, minor sink
 if scenario == 3:
     jct3 = networld.junctionDef(
-        x=25, y=35, cap=2, canStop=False, src=trafficSrcHub, sink=trafficSinkMajor)
+        x=25, y=30, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSinkMinor)
     jct7 = networld.junctionDef(
-        x=25, y=35, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSrcSignificant)
+        x=22, y=25, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSrcMinor)
 
 # Scenario 4: Gridlock avoidance
 # jct 3 hub traffic, minor sink
 # jct 7 hub traffic, minor sink
 if scenario == 4:
     jct3 = networld.junctionDef(
-        x=25, y=35, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+        x=25, y=30, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
     jct7 = networld.junctionDef(
-        x=25, y=35, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+        x=22, y=30, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
 
-junctions = [jct0, jct1, jct2, jct3, jct4, jct5, jct6, jct7, jct8, jct9]
+junctions = [jct0, jct1, jct2, jct3, jct4, jct5, jct6, jct7, jct8, jct9, jct10]
 junctionIdxs = [(node.x, node.y) for node in junctions]
 
 # straight line network:
@@ -105,18 +107,20 @@ strt5 = networld.streetDef(
 strt6 = networld.streetDef(
     (jct2.x, jct2.y), (jct7.x, jct7.y), ne, sw, biDirectional=True)
 strt7 = networld.streetDef(
-    (jct7.x, jct7.y), (jct4.x, jct4.y), se, nw, biDirectional=True)
+    (jct7.x, jct7.y), (jct8.x, jct8.y), e, w, biDirectional=True)
+strt8 = networld.streetDef(
+    (jct8.x, jct8.y), (jct4.x, jct4.y), se, nw, biDirectional=True)
 
 # The major diversion:
-strt8 = networld.streetDef(
-    (jct1.x, jct1.y), (jct8.x, jct8.y), n, s, biDirectional=True)
 strt9 = networld.streetDef(
-    (jct8.x, jct8.y), (jct9.x, jct9.y), e, w, biDirectional=True)
+    (jct1.x, jct1.y), (jct9.x, jct9.y), n, s, biDirectional=True)
 strt10 = networld.streetDef(
-    (jct9.x, jct9.y), (jct5.x, jct5.y), s, n, biDirectional=True)
+    (jct9.x, jct9.y), (jct10.x, jct10.y), e, w, biDirectional=True)
+strt11 = networld.streetDef(
+    (jct10.x, jct10.y), (jct5.x, jct5.y), s, n, biDirectional=True)
 
 streets = [strt0, strt1, strt2, strt3, strt4, strt5,
-           strt6, strt7, strt8, strt9, strt10]
+           strt6, strt7, strt8, strt9, strt10, strt11]
 
 # only one taxi, expressed as tuple (int id, (int x, int y))
 taxis = [(100, (0, 30))]
