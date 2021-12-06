@@ -366,8 +366,6 @@ class Taxi:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficInclusiveEuclidean, **args)
 
-        args = None
-
         return returnVal
 
     def _iterativeDeepeningSearch(self, origin, destination, step=1, corridor=False, **args):
@@ -480,6 +478,11 @@ class Taxi:
             # exit early if this is the destination
             return [origin]
 
+        # Addition for probabilistic dispatcher
+        # return the distance (or rather, time) to target
+        if 'travelTime' in args:
+            args['travelTime'].append(-1)
+
         # adapted from gridagents_solution.py
         expanded = {heuristic(origin, destination): {origin: [origin]}}
         while len(expanded) > 0:
@@ -487,6 +490,8 @@ class Taxi:
             bestPath = min(expanded.keys())
             nextExpansion = expanded[bestPath]
             if destination in nextExpansion:
+                if 'travelTime' in args:
+                    args['travelTime'][0] = bestPath
                 return nextExpansion[destination]
             nextNode = nextExpansion.popitem()
             while len(nextExpansion) > 0 and nextNode[0] in args['explored']:

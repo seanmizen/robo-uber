@@ -33,11 +33,11 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
 threadsToUse = 20
 # only used if displayUI == True:
-timeSleep = 0.2
+timeSleep = 0.08
 
 world = worldselector.export()
 
@@ -538,8 +538,7 @@ else:
             completeString = (curTimeString + " " +
                               completeString[len(curTimeString)+1:])[:50]
 
-            stdscr.addstr(
-                linesUsed + 1, 0, "|", curses.color_pair(1))
+            stdscr.addstr(linesUsed + 1, 0, "|", curses.color_pair(1))
             if progressCounter < 49:
                 stdscr.addstr(
                     linesUsed + 1, 1, completeString, curses.color_pair(2))
