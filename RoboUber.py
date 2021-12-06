@@ -33,11 +33,11 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = False
+displayUI = True
 # only used if displayUI == False:
-threadsToUse = 10
+threadsToUse = 20
 # only used if displayUI == True:
-timeSleep = 0.1
+timeSleep = 0.2
 
 world = worldselector.export()
 
@@ -51,8 +51,10 @@ world = worldselector.export()
 #    'taxis': taxis                                 (new)
 
 if displayUI:
+    # outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
+    #                        'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}, 'nodes': {}, 'calls': 0, 'steps': 0}
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
-                            'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}, 'nodes': {}, 'calls': 0, 'steps': 0}
+                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0, 'nodes': {}, 'taxiPaths': {}, 'completedFares': 0, 'cancelledFares': 0}
 else:
     # Run a reduced outputValues template when batch running
     # this will tell runWorld to store fewer values and should increase speed.
@@ -495,6 +497,7 @@ else:
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     curses.noecho()
     curses.cbreak()
     stdscr.keypad(1)
@@ -515,17 +518,25 @@ else:
     while threadsAlive(roboUberThreads):
         linesUsed = 0
         threadCount = 0
+        revenues = []
+        ttbs = []
+        allSteps = []
         for i, thread in enumerate(roboUberThreads):
             if i > maxLines:
                 next
             progressCounter = 0
+            curTimeString = "-"
             if len(outputValuesArray[i]['time']) > 0:
+                curTimeString = str(int(outputValuesArray[i]['time'][-1]))
                 progressCounter = int(
                     50 * (outputValuesArray[i]['time'][-1] / runTime))
 
-            # width 100 progress bar
+            # width 50 progress bar
             completeString = ("#" * progressCounter) + \
                 (" " * (50 - progressCounter))
+
+            completeString = (curTimeString + " " +
+                              completeString[len(curTimeString)+1:])[:50]
 
             stdscr.addstr(
                 linesUsed + 1, 0, "|", curses.color_pair(1))
@@ -564,14 +575,21 @@ else:
             # stdscr.addstr(
             #    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
 
+            revenues.append(10*outputValuesArray[i]['dispatcherRevenue'])
+            ttbs.append(avg)
+            allSteps.append(steps)
             if thread.is_alive():
                 threadCount += 1
             linesUsed += 1
 
-        #
-        #
-        #
-        #
+        stdscr.addstr(
+            linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
+        stdscr.addstr(
+            linesUsed + 1, 67, str(round(sum(ttbs) / len(ttbs), 2)), curses.color_pair(4))
+        stdscr.addstr(
+            linesUsed + 1, 81, str(round(sum(allSteps) / len(allSteps), 2)), curses.color_pair(4))
+
+        linesUsed += 1
 
         stdscr.addstr(
             0, 0, "{0} - {1} threads running.".format(dateStamp(), threadCount))

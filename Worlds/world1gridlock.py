@@ -1,6 +1,6 @@
 import networld
 import numpy
-trafficOn = False
+trafficOn = True
 
 
 def fareProbMagnet(m): return numpy.random.random() > 0.98
@@ -27,13 +27,13 @@ trafficSinkDrain = 4 if trafficOn else 0
 jct0 = networld.junctionDef(
     x=0, y=0, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct1 = networld.junctionDef(
-    x=20, y=0, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMajor)
+    x=20, y=0, cap=2, canStop=True, src=trafficSrcMajor, sink=trafficSinkMajor)
 jct2 = networld.junctionDef(
     x=40, y=0, cap=2, canStop=True, src=trafficSrcMajor, sink=trafficSinkMajor)
 jct3 = networld.junctionDef(
     x=49, y=0, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct4 = networld.junctionDef(
-    x=0, y=10, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMinor)
+    x=0, y=10, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct5 = networld.junctionDef(
     x=10, y=10, cap=2, canStop=True, fareProb=fareProbSemiPopular, maxTraffic=12)
 jct6 = networld.junctionDef(x=20, y=10, cap=2, canStop=True, maxTraffic=12)
@@ -43,24 +43,24 @@ jct8 = networld.junctionDef(
     x=30, y=15, cap=4, canStop=True, fareProb=fareProbSemiPopular, maxTraffic=12)
 jct9 = networld.junctionDef(
     x=40, y=15, cap=4, canStop=True, fareProb=fareProbPopular, maxTraffic=12)
-jct10 = networld.junctionDef(x=49, y=15, cap=2, canStop=True,
-                             src=trafficSrcSignificant, sink=trafficSinkSignificant)
+jct10 = networld.junctionDef(x=49, y=15, cap=2, canStop=True)
 jct11 = networld.junctionDef(x=10, y=20, cap=2, canStop=True)
 jct12 = networld.junctionDef(
     x=20, y=20, cap=4, canStop=True, fareProb=fareProbSemiPopular, maxTraffic=12)
 jct13 = networld.junctionDef(x=10, y=24, cap=2, canStop=True)
 jct14 = networld.junctionDef(x=20, y=24, cap=4, canStop=True)
 jct15 = networld.junctionDef(x=24, y=24, cap=8, canStop=True, fareProb=fareProbMagnet,
-                             maxTraffic=16, src=trafficSrcHub, sink=trafficSinkMajor)
-jct16 = networld.junctionDef(x=30, y=24, cap=4, canStop=True)
+                             maxTraffic=16, src=trafficSrcHub, sink=0)
+jct16 = networld.junctionDef(
+    x=30, y=24, cap=4, canStop=True, src=trafficSrcHub)
 jct17 = networld.junctionDef(
-    x=0, y=35, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMajor)
+    x=0, y=35, cap=2, canStop=True, src=trafficSrcMajor, sink=trafficSinkMajor)
 jct18 = networld.junctionDef(
     x=10, y=35, cap=4, canStop=True, fareProb=fareProbPopular, maxTraffic=12)
 jct19 = networld.junctionDef(
     x=20, y=30, cap=4, canStop=True, fareProb=fareProbSemiPopular)
 jct20 = networld.junctionDef(x=24, y=35, cap=4, canStop=True, fareProb=fareProbPopular,
-                             maxTraffic=12, src=trafficSrcMajor, sink=trafficSinkDrain)
+                             maxTraffic=12, src=trafficSrcHub, sink=0)
 jct21 = networld.junctionDef(x=30, y=30, cap=4, canStop=True)
 jct22 = networld.junctionDef(
     x=40, y=30, cap=4, canStop=True, fareProb=fareProbSemiPopular, maxTraffic=12)
@@ -75,7 +75,7 @@ jct27 = networld.junctionDef(x=40, y=40, cap=2, canStop=True, maxTraffic=12)
 jct28 = networld.junctionDef(
     x=0, y=49, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct29 = networld.junctionDef(
-    x=15, y=49, cap=2, canStop=True, src=trafficSrcSignificant, sink=trafficSinkMajor)
+    x=15, y=49, cap=2, canStop=True, src=trafficSrcMajor, sink=trafficSinkMajor)
 jct30 = networld.junctionDef(
     x=30, y=49, cap=2, canStop=True, src=trafficSrcMinor, sink=trafficSinkMinor)
 jct31 = networld.junctionDef(
