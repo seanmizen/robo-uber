@@ -466,10 +466,9 @@ class Taxi:
     # If traffic increases while the taxi is en-route, it is possible the taxi will re-calculate
     # especially if gridlock occurs while en-route.
     def _trafficInclusiveEuclidean(self, a, b):
-        if a in self._world._trafficQ:
-            expectedTraffic = self._world._trafficQ[a]
-        else:
-            expectedTraffic = 0
+        expectedTraffic = self._world._net[a].traffic
+        if expectedTraffic == self._world._net[a].maxTraffic:
+            expectedTraffic = math.inf
         return expectedTraffic + self._euclideanDistance(a, b)
 
     def _aStarSearch(self, origin, destination, heuristic, **args):
