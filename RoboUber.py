@@ -37,7 +37,7 @@ displayUI = False
 # only used if displayUI == False:
 threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.01
+timeSleep = 0.1
 
 world = worldselector.export()
 

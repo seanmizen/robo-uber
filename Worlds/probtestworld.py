@@ -1,6 +1,6 @@
 import networld
 import numpy
-scenario = 2
+scenario = 4
 trafficOn = True
 
 n = 0
@@ -81,16 +81,23 @@ if scenario == 3:
     jct3b = networld.junctionDef(
         x=27, y=30, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSinkMinor)
     jct7 = networld.junctionDef(
-        x=22, y=25, cap=2, canStop=False, src=trafficSrcMajor, sink=trafficSrcMinor)
+        x=22, y=25, cap=2, canStop=False, src=trafficSrcSignificant, sink=trafficSrcMinor)
 
 # Scenario 4: Gridlock avoidance
-# jct 3 hub traffic, minor sink
-# jct 7 hub traffic, minor sink
 if scenario == 4:
     jct3a = networld.junctionDef(
         x=23, y=30, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
     jct7 = networld.junctionDef(
-        x=22, y=30, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+        x=22, y=25, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+
+# Scenario 5: Unavoidable Gridlock
+if scenario == 4:
+    jct3a = networld.junctionDef(
+        x=23, y=30, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+    jct7 = networld.junctionDef(
+        x=22, y=25, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
+    jct9 = networld.junctionDef(
+        x=10, y=20, cap=2, canStop=True, src=trafficSrcHub, sink=trafficSinkMinor)
 
 junctions = [jct0, jct1, jct2, jct3a, jct3b,
              jct4, jct5, jct6, jct7, jct8, jct9, jct10]
@@ -133,7 +140,7 @@ streets = [strt0, strt1, strt2, strt3a, strt3b, strt4, strt5,
 
 # only one taxi, expressed as tuple (int id, (int x, int y))
 taxis = [(100, (0, 30))]
-if scenario == 5:
+if scenario == 6:
     taxis.append((101, (49, 30)))
 
 
