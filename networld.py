@@ -863,7 +863,10 @@ class NetWorld:
                     "Node {0} tried to admit a taxi that does not exist".format(node.index))
             # punish greedy taxis that try to enter multiple nodes by denying them entry
             # to all. They'll soon learn not to try to hedge their bets...
+            # SM 2021-12-06: WHAT IS THIS?
+            # This paralyses taxis. Is this an intentional bug? Do not understand this.
             if (self._taxis[taxi[1]] != (None, -1) or not taxi[1].onDuty):
+                # if not taxi[1].onDuty:
                 self._taxis[taxi[1]] = (None, -1)
             # otherwise admit any on-duty taxis
             else:

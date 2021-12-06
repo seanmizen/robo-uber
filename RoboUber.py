@@ -33,11 +33,11 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
 threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.02
+timeSleep = 0.01
 
 world = worldselector.export()
 
@@ -54,7 +54,8 @@ if displayUI:
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
                             'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}, 'nodes': {}, 'calls': 0, 'steps': 0}
 else:
-    # Run a reduced outputValues template - this will tell runWorld to store fewer values and increase speed.
+    # Run a reduced outputValues template when batch running
+    # this will tell runWorld to store fewer values and should increase speed.
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
                             'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0}
     pass

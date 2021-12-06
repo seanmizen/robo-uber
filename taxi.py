@@ -359,9 +359,12 @@ class Taxi:
         if False:
             returnVal = self._iterativeDeepeningSearch(
                 origin, destination, 1, True, ** args)
+        if False:
+            returnVal = self._aStarSearch(
+                origin, destination, self._euclideanDistance, **args)
         if True:
             returnVal = self._aStarSearch(
-                origin, destination, self.euclideanDistance, **args)
+                origin, destination, self._trafficInclusiveEuclidean, **args)
 
         args = None
 
@@ -454,9 +457,20 @@ class Taxi:
                     return path
         return []
 
-    def euclideanDistance(self, a, b):
+    def _euclideanDistance(self, a, b):
         return math.sqrt(
             (a[0]-b[0])**2+(a[1]-b[1])**2)
+
+    # Calculate euclidean distance + the current node's traffic estimate.
+    # the traffic encountered should be equal to the time delay incurred - so this can be added as "distance"
+    # If traffic increases while the taxi is en-route, it is possible the taxi will re-calculate
+    # especially if gridlock occurs while en-route.
+    def _trafficInclusiveEuclidean(self, a, b):
+        if a in self._world._trafficQ:
+            expectedTraffic = self._world._trafficQ[a]
+        else:
+            expectedTraffic = 0
+        return expectedTraffic + self._euclideanDistance(a, b)
 
     def _aStarSearch(self, origin, destination, heuristic, **args):
         self.calls += 1

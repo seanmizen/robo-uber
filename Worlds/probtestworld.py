@@ -35,29 +35,29 @@ trafficSinkMajor = 3 if trafficOn else 0
 trafficSinkDrain = 4 if trafficOn else 0
 
 jct0 = networld.junctionDef(
-    x=0, y=30, cap=2, canStop=True, fareProb=fareProbZero)
+    x=0, y=30, cap=1, canStop=True, fareProb=fareProbZero)
 jct1 = networld.junctionDef(
-    x=10, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=10, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct2 = networld.junctionDef(
-    x=20, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=20, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct3a = networld.junctionDef(
-    x=23, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=23, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct3b = networld.junctionDef(
-    x=27, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=27, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct4 = networld.junctionDef(
-    x=30, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=30, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct5 = networld.junctionDef(
-    x=40, y=30, cap=2, canStop=False, fareProb=fareProbZero)
+    x=40, y=30, cap=1, canStop=False, fareProb=fareProbZero)
 jct6 = networld.junctionDef(
-    x=49, y=30, cap=2, canStop=True, fareProb=fareProbNormal)
+    x=49, y=30, cap=1, canStop=True, fareProb=fareProbNormal)
 jct7 = networld.junctionDef(
-    x=22, y=25, cap=2, canStop=False, fareProb=fareProbZero)
+    x=22, y=25, cap=1, canStop=False, fareProb=fareProbZero)
 jct8 = networld.junctionDef(
-    x=28, y=25, cap=2, canStop=False, fareProb=fareProbZero)
+    x=28, y=25, cap=1, canStop=False, fareProb=fareProbZero)
 jct9 = networld.junctionDef(
-    x=10, y=20, cap=2, canStop=False, fareProb=fareProbZero)
+    x=10, y=20, cap=1, canStop=False, fareProb=fareProbZero)
 jct10 = networld.junctionDef(
-    x=40, y=20, cap=2, canStop=False, fareProb=fareProbZero)
+    x=40, y=20, cap=1, canStop=False, fareProb=fareProbZero)
 
 # Scenario 1: No traffic
 # taxi will take a straight line route across the map
@@ -133,6 +133,8 @@ streets = [strt0, strt1, strt2, strt3a, strt3b, strt4, strt5,
 
 # only one taxi, expressed as tuple (int id, (int x, int y))
 taxis = [(100, (0, 30))]
+if scenario == 5:
+    taxis.append((101, (49, 30)))
 
 
 def export():
