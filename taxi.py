@@ -489,10 +489,7 @@ class Taxi:
                     expTgt = expansionTargets.pop()
                     estimatedDistance = bestPath - \
                         heuristic(nextNode[0], destination) + \
-                        + heuristic(expTgt[0], destination)
-                    # estimatedDistance = bestPath - \
-                    #     heuristic(nextNode[0], destination) + \
-                    #     expTgt[1] + heuristic(expTgt[0], destination)
+                        expTgt[1][1] + heuristic(expTgt[0], destination)
                     if estimatedDistance in expanded:
                         expanded[estimatedDistance][expTgt[0]
                                                     ] = nextNode[1]+[expTgt[0]]
