@@ -254,13 +254,17 @@ class Dispatcher:
     def _allocateFare(self, origin, destination, time):
         if False:
             self._allocateFare_Original(origin, destination, time)
-        if True:
+        if False:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility1)
+        if True:
+            self._allocateFareWithUtility(
+                origin, destination, time, self._fareUtility2)
         if False:
             pass
 
     def _fareUtility1(self, taxi, origin, destination, time):
+        # return farePayout / (how long will it take to get the payout)
         # make use of the taxi's routefinder. It is a private method, but it's very useful.
         # fareJourneyTime = the actual fare's itineary time
         # fareTravelTime = how long it will take to reach the fare
@@ -278,6 +282,29 @@ class Dispatcher:
         if fareJourneyTime > -1 and fareTravelTime > -1:
             returnVal = farePrice / \
                 (fareJourneyTime + fareTravelTime)
+        return returnVal
+
+    def _fareUtility2(self, taxi, origin, destination, time):
+        # a "best improvement" algorithm
+        # return the % increase in a taxi's account.
+        # allocateFareWithUtility will choose the taxi with the best % improvement
+        fareJourneyTime = -1
+        fareTravelTime = -1
+        args = {'travelTime': []}
+        fareJourneyPath = taxi._planPath(
+            origin, destination, **args)
+        fareJourneyTime = args['travelTime'][0]
+        fareTravelPath = taxi._planPath(
+            taxi.currentLocation, origin, **args)
+        fareTravelTime = args['travelTime'][0]
+
+        returnVal = -math.inf
+        if fareJourneyTime > -1 and fareTravelTime > -1:
+            farePrice = self._fareBoard[origin][destination][time].price
+            accountBeforeFare = taxi._account
+            accountAfterFare = accountBeforeFare + farePrice + \
+                (fareJourneyTime + fareTravelTime)
+            returnVal = accountAfterFare / accountBeforeFare
         return returnVal
 
     def _allocateFareWithUtility(self, origin, destination, time, utilityMethod):
