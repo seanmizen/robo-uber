@@ -204,6 +204,22 @@ class Dispatcher:
                         elif self._fareBoard[origin][destination][time].taxi < 0 and len(self._fareBoard[origin][destination][time].bidders) > 0:
                             self._allocateFare(origin, destination, time)
 
+    def _performUtilityMatching(self, time):
+        # TODO complete this
+        utilityDict = {}
+        pairings = []
+        # (taxi, origin, destination, time)
+        for origin in self._fareBoard.keys():
+            for destination in self._fareBoard[origin].keys():
+                for time in sorted(list(self._fareBoard[origin][destination].keys())):
+                    for taxiIdx in self._fareBoard[origin][destination][time].bidders:
+                        pairing = (self._taxis[taxiIdx],
+                                   origin, destination, time)
+                        pairings.append(pairing)
+        utility = sum(map(self._fareUtility1, pairings))
+        utilityDict[utility] = pairings
+        return dict
+
     def clockTick_Original(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
@@ -286,7 +302,7 @@ class Dispatcher:
 
     def _fareUtility2(self, taxi, origin, destination, time):
         # a "best improvement" algorithm
-        # return the % increase in a taxi's account.
+        # return the increase in a taxi's account, as a ratio
         # allocateFareWithUtility will choose the taxi with the best % improvement
         fareJourneyTime = -1
         travelToFareTime = -1
