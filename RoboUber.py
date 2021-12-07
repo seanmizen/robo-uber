@@ -35,7 +35,7 @@ displaySize = (1024, 768)
 # if displayUI set to false, set ticks = 0 and run x number of threads
 displayUI = False
 # only used if displayUI == False:
-threadsToUse = 5
+threadsToUse = 10
 # only used if displayUI == True:
 timeSleep = 0.01
 
@@ -519,6 +519,7 @@ else:
 
     keepRunning = True
     while keepRunning:
+        tooShort = False
         linesUsed = 0
         revenues = []
         ttbs = []
@@ -587,21 +588,24 @@ else:
                 allSteps.append(steps)
                 linesUsed += 1
             except:
-                linesUsed -= 2
-                stdscr.addstr(
-                    linesUsed, 0, "."*100, curses.color_pair(1))
-                stdscr.addstr(
-                    linesUsed + 1, 0, " "*100, curses.color_pair(1))
-                try:
-                    stdscr.addstr(
-                        linesUsed + 2, 0, " "*100, curses.color_pair(1))
-                except:
-                    pass
+                linesUsed -= 1
+                tooShort = True
 
             keepRunning = threadsAlive(
                 roboUberThreads) or not threadsStarted[i]
 
         try:
+            if tooShort:
+                linesUsed -= 1
+                try:
+                    stdscr.addstr(
+                        linesUsed, 0, "."*100, curses.color_pair(1))
+                    stdscr.addstr(
+                        linesUsed + 1, 0, " "*100, curses.color_pair(1))
+                    stdscr.addstr(
+                        linesUsed + 2, 0, " "*100, curses.color_pair(1))
+                except:
+                    pass
             stdscr.addstr(
                 linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
             stdscr.addstr(
