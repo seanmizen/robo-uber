@@ -78,7 +78,7 @@ class Taxi:
         self._direction = -1
         self._nextLoc = None
         self._nextDirection = -1
-        self._timeAtBankruptcy = 0
+        self._timeAtBankruptcy = -1
         # this contains a Fare (object) that the taxi has picked up. You use the functions pickupFare()
         # and dropOffFare() in a given Node to collect and deliver a fare
         self._passenger = None

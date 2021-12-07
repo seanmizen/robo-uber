@@ -1047,7 +1047,10 @@ class NetWorld:
             if 'steps' in outputs:
                 outputs['steps'] = 0
             for taxi in self._taxis.items():
-                outputs['timeAtBanktrupcy'][taxi[0].number] = taxi[0]._timeAtBankruptcy
+                if taxi[0]._timeAtBankruptcy == -1:
+                    outputs['timeAtBanktrupcy'][taxi[0].number] = 0
+                elif taxi[0]._timeAtBankruptcy != 0:
+                    outputs['timeAtBanktrupcy'][taxi[0].number] = taxi[0]._timeAtBankruptcy
                 if 'calls' in outputs:
                     outputs['calls'] += taxi[0].calls
                 if 'steps' in outputs:

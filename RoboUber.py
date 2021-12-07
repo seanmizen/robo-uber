@@ -33,9 +33,9 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
-threadsToUse = 10
+threadsToUse = 5
 # only used if displayUI == True:
 timeSleep = 0.01
 
@@ -136,7 +136,7 @@ curTime = 0
 userExit = threading.Event()
 
 roboUber = threading.Thread(target=runRoboUber,
-                            name='RoboUberThread',
+                            name='RoboUberThread ' + str(0),
                             kwargs={'worldX': worldX,
                                     'worldY': worldY,
                                     'runTime': runTime,
@@ -159,7 +159,7 @@ roboUberThreads = [roboUber]
 for i in range(1, threadsToUse):
     outputValuesArray.append(copy.deepcopy(outputValuesTemplate))
     roboUberThreads.append(threading.Thread(target=runRoboUber,
-                                            name='RoboUberThread',
+                                            name='RoboUberThread ' + str(i),
                                             kwargs={'worldX': worldX,
                                                     'worldY': worldY,
                                                     'runTime': runTime,
@@ -478,10 +478,12 @@ if displayUI:
             #    curTime += 1
 else:
     # assume this is a batch run. run multiple threads, start a curses session.
+    threadsStarted = []
     for i, thread in enumerate(roboUberThreads, start=1):
-        thread.start()
-        print(
-            "{0} - Thread {1} started.".format(dateStamp(), i))
+        threadsStarted.append(False)
+        # thread.start()
+        # print(
+        #    "{0} - Thread {1} started.".format(dateStamp(), i))
 
     # threads will now be running. set up a curses terminal session.
     stdscr = curses.initscr()
@@ -507,23 +509,33 @@ else:
             isAlive = isAlive or thread.is_alive()
         return isAlive
 
-    while threadsAlive(roboUberThreads):
+    def startThreads():
+        for i, thread in enumerate(roboUberThreads):
+            threadsStarted[i] = True
+            thread.start()
+
+    a = threading.Thread(target=startThreads)
+    a.start()
+
+    keepRunning = True
+    while keepRunning:
         linesUsed = 0
-        threadCount = 0
         revenues = []
         ttbs = []
         allSteps = []
+        threadCount = 0
         for i, thread in enumerate(roboUberThreads):
             if thread.is_alive():
                 threadCount += 1
-
             try:
                 if i > maxLines:
                     next
                 progressCounter = 0
+                curTime = 0
                 curTimeString = "-"
                 if len(outputValuesArray[i]['time']) > 0:
-                    curTimeString = str(int(outputValuesArray[i]['time'][-1]))
+                    curTime = int(outputValuesArray[i]['time'][-1])
+                    curTimeString = str(curTime)
                     progressCounter = int(
                         50 * (outputValuesArray[i]['time'][-1] / runTime))
 
@@ -535,7 +547,7 @@ else:
                                   completeString[len(curTimeString)+1:])[:50]
 
                 stdscr.addstr(linesUsed + 1, 0, "|", curses.color_pair(1))
-                if progressCounter < 49:
+                if curTime <= runTime - 2:
                     stdscr.addstr(
                         linesUsed + 1, 1, completeString, curses.color_pair(2))
                 else:
@@ -586,6 +598,9 @@ else:
                 except:
                     pass
 
+            keepRunning = threadsAlive(
+                roboUberThreads) or not threadsStarted[i]
+
         try:
             stdscr.addstr(
                 linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
@@ -597,12 +612,21 @@ else:
             linesUsed += 1
 
             stdscr.addstr(
-                0, 0, "{0} - {1} threads running.".format(dateStamp(), threadCount))
+                0, 6, "{0} - {1} threads running.    ".format(dateStamp(), threadCount))
+            stdscr.addstr(0, 0, "")
         except:
             pass
 
         stdscr.refresh()
-        # print("Alive!")
+
+    for i in range(10, 0, -1):
+        stdscr.addstr(
+            0, 6, "{0} - {1} threads running.    ".format(dateStamp(), 0))
+        stdscr.addstr(
+            0, 52, "Simulation will close in {0}   ".format((str(i) + "   ")[:3]))
+        stdscr.addstr(0, 0, "")
+        stdscr.refresh()
+        time.sleep(1)
 
     # (currently redundant) wait for the main thread to finish
     roboUber.join()
