@@ -33,22 +33,13 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = False
+displayUI = True
 # only used if displayUI == False:
-threadsToUse = 20
+threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.08
+timeSleep = 0.01
 
 world = worldselector.export()
-
-#    'junctions': junctions,
-#    'junctionIdxs
-#    'streets': streets,
-#    'fareProbMagnet': fareProbMagnet,
-#    'fareProbPopular': fareProbPopular,
-#    'fareProbSemiPopular': fareProbSemiPopular,
-#    'fareProbNormal': fareProbNormal,
-#    'taxis': taxis                                 (new)
 
 if displayUI:
     # outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
@@ -266,7 +257,7 @@ if displayUI:
 
     # which taxi is associated with which colour
     taxiColours = {}
-    # possible colours for taxis: black, blue, green, red, magenta, cyan, yellow, white
+    # possible colours for taxis: black, blue, green, red, magenta, cyan, yellow, grey
     taxiPalette = [pygame.Color(0, 0, 0),
                    pygame.Color(255, 0, 0),
                    pygame.Color(0, 255, 0),
@@ -274,7 +265,7 @@ if displayUI:
                    pygame.Color(255, 0, 255),
                    pygame.Color(0, 255, 255),
                    pygame.Color(255, 255, 0),
-                   pygame.Color(255, 255, 255)]
+                   pygame.Color(215, 215, 215)]
 
     # relative positions of taxi and fare markers in a mesh point
     taxiRect = pygame.Rect(round(meshSize[0]/3),
@@ -359,10 +350,11 @@ if displayUI:
 
                 # some taxis are on duty?
                 if len(taxisToRedraw) > 0:
-                    for taxi in taxisToRedraw.items():
+                    for taxiIdx, taxi in enumerate(taxisToRedraw.items()):
                         # new ones should be assigned a colour
                         if taxi[0] not in taxiColours and len(taxiPalette) > 0:
-                            taxiColours[taxi[0]] = taxiPalette.pop(0)
+                            taxiColours[taxi[0]] = taxiPalette[taxiIdx %
+                                                               len(taxiPalette)]
                         # but only plot taxis up to the palette limit (which can be easily extended)
                         if taxi[0] in taxiColours:
                             newestTime = sorted(list(taxi[1].keys()))[-1]
