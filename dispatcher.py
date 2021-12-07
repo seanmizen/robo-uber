@@ -267,21 +267,21 @@ class Dispatcher:
         # return farePayout / (how long will it take to get the payout)
         # make use of the taxi's routefinder. It is a private method, but it's very useful.
         # fareJourneyTime = the actual fare's itineary time
-        # fareTravelTime = how long it will take to reach the fare
+        # travelToFareTime = how long it will take to reach the fare
         fareJourneyTime = -1
-        fareTravelTime = -1
+        travelToFareTime = -1
         args = {'travelTime': []}
         fareJourneyPath = taxi._planPath(
             origin, destination, **args)
         fareJourneyTime = args['travelTime'][0]
         fareTravelPath = taxi._planPath(
             taxi.currentLocation, origin, **args)
-        fareTravelTime = args['travelTime'][0]
-        farePrice = self._fareBoard[origin][destination][time].price
+        travelToFareTime = args['travelTime'][0]
+        farePayout = self._fareBoard[origin][destination][time].price
         returnVal = 0
-        if fareJourneyTime > -1 and fareTravelTime > -1:
-            returnVal = farePrice / \
-                (fareJourneyTime + fareTravelTime)
+        if fareJourneyTime > -1 and travelToFareTime > -1:
+            returnVal = farePayout / \
+                (fareJourneyTime + travelToFareTime)
         return returnVal
 
     def _fareUtility2(self, taxi, origin, destination, time):
@@ -289,21 +289,21 @@ class Dispatcher:
         # return the % increase in a taxi's account.
         # allocateFareWithUtility will choose the taxi with the best % improvement
         fareJourneyTime = -1
-        fareTravelTime = -1
+        travelToFareTime = -1
         args = {'travelTime': []}
         fareJourneyPath = taxi._planPath(
             origin, destination, **args)
         fareJourneyTime = args['travelTime'][0]
         fareTravelPath = taxi._planPath(
             taxi.currentLocation, origin, **args)
-        fareTravelTime = args['travelTime'][0]
+        travelToFareTime = args['travelTime'][0]
 
         returnVal = -math.inf
-        if fareJourneyTime > -1 and fareTravelTime > -1:
-            farePrice = self._fareBoard[origin][destination][time].price
+        if fareJourneyTime > -1 and travelToFareTime > -1:
+            farePayout = self._fareBoard[origin][destination][time].price
             accountBeforeFare = taxi._account
-            accountAfterFare = accountBeforeFare + farePrice + \
-                (fareJourneyTime + fareTravelTime)
+            accountAfterFare = accountBeforeFare + farePayout + \
+                (fareJourneyTime + travelToFareTime)
             returnVal = accountAfterFare / accountBeforeFare
         return returnVal
 
