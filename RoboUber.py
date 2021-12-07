@@ -522,76 +522,92 @@ else:
         ttbs = []
         allSteps = []
         for i, thread in enumerate(roboUberThreads):
-            if i > maxLines:
-                next
-            progressCounter = 0
-            curTimeString = "-"
-            if len(outputValuesArray[i]['time']) > 0:
-                curTimeString = str(int(outputValuesArray[i]['time'][-1]))
-                progressCounter = int(
-                    50 * (outputValuesArray[i]['time'][-1] / runTime))
-
-            # width 50 progress bar
-            completeString = ("#" * progressCounter) + \
-                (" " * (50 - progressCounter))
-
-            completeString = (curTimeString + " " +
-                              completeString[len(curTimeString)+1:])[:50]
-
-            stdscr.addstr(linesUsed + 1, 0, "|", curses.color_pair(1))
-            if progressCounter < 49:
-                stdscr.addstr(
-                    linesUsed + 1, 1, completeString, curses.color_pair(2))
-            else:
-                stdscr.addstr(
-                    linesUsed + 1, 1, completeString, curses.color_pair(3))
-            stdscr.addstr(
-                linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
-            completeString = completeString + "| $"
-            nextString = (
-                str(round(10*outputValuesArray[i]['dispatcherRevenue'], 2)) + "       ")[:7]
-            stdscr.addstr(
-                linesUsed + 1, len(completeString), nextString, curses.color_pair(3))
-            completeString = completeString + nextString
-
-            bankruptcyTimes = list(
-                outputValuesArray[i]['timeAtBanktrupcy'].values())
-            if len(bankruptcyTimes) > 0:
-                avg = sum(bankruptcyTimes) / len(bankruptcyTimes)
-            else:
-                avg = 0
-            if 'steps' in outputValuesArray[i]:
-                steps = outputValuesArray[i]['steps']
-            else:
-                steps = 0
-
-            lastString = " attb: " + \
-                (str(avg) + "      ")[:6] + \
-                " steps: " + (str(steps) + "      ")[:6]
-            stdscr.addstr(
-                linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
-            completeString = completeString + lastString
-            # stdscr.addstr(
-            #    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
-
-            revenues.append(10*outputValuesArray[i]['dispatcherRevenue'])
-            ttbs.append(avg)
-            allSteps.append(steps)
             if thread.is_alive():
                 threadCount += 1
+
+            try:
+                if i > maxLines:
+                    next
+                progressCounter = 0
+                curTimeString = "-"
+                if len(outputValuesArray[i]['time']) > 0:
+                    curTimeString = str(int(outputValuesArray[i]['time'][-1]))
+                    progressCounter = int(
+                        50 * (outputValuesArray[i]['time'][-1] / runTime))
+
+                # width 50 progress bar
+                completeString = ("#" * progressCounter) + \
+                    (" " * (50 - progressCounter))
+
+                completeString = (curTimeString + " " +
+                                  completeString[len(curTimeString)+1:])[:50]
+
+                stdscr.addstr(linesUsed + 1, 0, "|", curses.color_pair(1))
+                if progressCounter < 49:
+                    stdscr.addstr(
+                        linesUsed + 1, 1, completeString, curses.color_pair(2))
+                else:
+                    stdscr.addstr(
+                        linesUsed + 1, 1, completeString, curses.color_pair(3))
+                stdscr.addstr(
+                    linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
+                completeString = completeString + "| $"
+                nextString = (
+                    str(round(10*outputValuesArray[i]['dispatcherRevenue'], 2)) + "       ")[:7]
+                stdscr.addstr(
+                    linesUsed + 1, len(completeString), nextString, curses.color_pair(3))
+                completeString = completeString + nextString
+
+                bankruptcyTimes = list(
+                    outputValuesArray[i]['timeAtBanktrupcy'].values())
+                if len(bankruptcyTimes) > 0:
+                    avg = sum(bankruptcyTimes) / len(bankruptcyTimes)
+                else:
+                    avg = 0
+                if 'steps' in outputValuesArray[i]:
+                    steps = outputValuesArray[i]['steps']
+                else:
+                    steps = 0
+
+                lastString = " attb: " + \
+                    (str(avg) + "      ")[:6] + \
+                    " steps: " + (str(steps) + "      ")[:6]
+                stdscr.addstr(
+                    linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
+                completeString = completeString + lastString
+                # stdscr.addstr(
+                #    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
+
+                revenues.append(10*outputValuesArray[i]['dispatcherRevenue'])
+                ttbs.append(avg)
+                allSteps.append(steps)
+                linesUsed += 1
+            except:
+                linesUsed -= 2
+                stdscr.addstr(
+                    linesUsed, 0, "."*100, curses.color_pair(1))
+                stdscr.addstr(
+                    linesUsed + 1, 0, " "*100, curses.color_pair(1))
+                try:
+                    stdscr.addstr(
+                        linesUsed + 2, 0, " "*100, curses.color_pair(1))
+                except:
+                    pass
+
+        try:
+            stdscr.addstr(
+                linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
+            stdscr.addstr(
+                linesUsed + 1, 67, str(round(sum(ttbs) / len(ttbs), 2)), curses.color_pair(4))
+            stdscr.addstr(
+                linesUsed + 1, 81, str(round(sum(allSteps) / len(allSteps), 2)), curses.color_pair(4))
+
             linesUsed += 1
 
-        stdscr.addstr(
-            linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
-        stdscr.addstr(
-            linesUsed + 1, 67, str(round(sum(ttbs) / len(ttbs), 2)), curses.color_pair(4))
-        stdscr.addstr(
-            linesUsed + 1, 81, str(round(sum(allSteps) / len(allSteps), 2)), curses.color_pair(4))
-
-        linesUsed += 1
-
-        stdscr.addstr(
-            0, 0, "{0} - {1} threads running.".format(dateStamp(), threadCount))
+            stdscr.addstr(
+                0, 0, "{0} - {1} threads running.".format(dateStamp(), threadCount))
+        except:
+            pass
 
         stdscr.refresh()
         # print("Alive!")
