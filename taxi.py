@@ -91,6 +91,10 @@ class Taxi:
         # in order of traversal, and does NOT have to include every node passed through, if these
         # are incidental (i.e. involve no turns or stops or any other remarkable feature)
         self._path = []
+        # for part 1C - keep a traffic history.
+        self._trafficHistory = {}
+        for node in self._world._net:
+            self._trafficHistory[node] = []
         # pick the first available entry point starting from the top left corner if we don't have a
         # preferred choice when coming on duty
         if self._onDutyPos is None:
@@ -187,6 +191,12 @@ class Taxi:
     # using transmitFareBid, and any other internal activity seen as potentially useful.
     def clockTick(self, world):
         # automatically go off duty if we have absorbed as much loss as we can in a day
+
+        # Getting probabilistic - update the traffic history map.
+        # for part 1C
+        for node in self._map:
+            # Do not worry about maxTraffic / Gridlock here - the path planner can do gridlock checks.
+            self._trafficHistory[node].append(world._net[node].traffic)
 
         if self._account == 0:
             # Only update bankruptcy time when taxi hits 0
@@ -365,6 +375,9 @@ class Taxi:
         if True:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficInclusiveEuclidean, **args)
+        if False:
+            returnVal = self._aStarSearch(
+                origin, destination, self._trafficPredictingEuclidean, **args)
 
         return returnVal
 
@@ -467,6 +480,25 @@ class Taxi:
         expectedTraffic = self._world._net[a].traffic
         if expectedTraffic == self._world._net[a].maxTraffic:
             expectedTraffic = math.inf
+        return expectedTraffic + self._euclideanDistance(a, b)
+
+    # The same as TIE, but calculate the probable traffic given a history of all traffic.
+    # configurable: either all traffic data points, or the last N traffic points
+    def _trafficPredictingEuclidean(self, a, b):
+        maxHistory = 20
+        allTrafficPoints = self._trafficHistory[a]
+        if len(allTrafficPoints) != 0:
+            if maxHistory > len(allTrafficPoints):
+                maxHistory = len(allTrafficPoints)
+            allTrafficPoints = allTrafficPoints[-(
+                len(allTrafficPoints) - maxHistory):]
+            meanTraffic = sum(allTrafficPoints) / len(allTrafficPoints)
+            expectedTraffic = meanTraffic
+            # If expectedTraffic approaches maxTraffic (within 1), assume gridlock
+            if expectedTraffic >= self._world._net[a].maxTraffic - 1:
+                expectedTraffic = math.inf
+        else:
+            expectedTraffic = 0
         return expectedTraffic + self._euclideanDistance(a, b)
 
     def _aStarSearch(self, origin, destination, heuristic, **args):
