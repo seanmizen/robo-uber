@@ -268,12 +268,12 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
-        if False:
+        if True:
             self._allocateFare_Original(origin, destination, time)
         if False:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility1)
-        if True:
+        if False:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility2)
         if False:

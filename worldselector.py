@@ -6,4 +6,4 @@ import Worlds.probtestworld as probtestworld
 
 
 def export():
-    return worldbusy.export()
+    return world.export()

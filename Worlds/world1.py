@@ -1,6 +1,6 @@
 import networld
 import numpy
-trafficOn = False
+trafficOn = True
 
 
 def fareProbMagnet(m): return numpy.random.random() > 0.98
