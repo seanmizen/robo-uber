@@ -372,10 +372,10 @@ class Taxi:
         if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._euclideanDistance, **args)
-        if False:
+        if True:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficInclusiveEuclidean, **args)
-        if True:
+        if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficPredictingEuclidean, **args)
 
@@ -613,7 +613,7 @@ class Taxi:
         Bid = CloseEnough and Worthwhile
         return Bid
 
-    def _bidOnFare_original(self, time, origin, destination, price):
+    def _bidOnFare_Original(self, time, origin, destination, price):
         NoCurrentPassengers = self._passenger is None
         NoAllocatedFares = len(
             [fare for fare in self._availableFares.values() if fare.allocated]) == 0
