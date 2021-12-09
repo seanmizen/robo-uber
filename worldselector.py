@@ -6,4 +6,4 @@ import Worlds.probtestworld as probtestworld
 
 
 def export():
-    return world1rushhour.export()
+    return world1gridlock.export()
