@@ -35,6 +35,7 @@ displaySize = (1024, 768)
 # if displayUI set to false, set ticks = 0 and run x number of threads
 displayUI = False
 # only used if displayUI == False:
+# begs the question: how many threads can python run, total?
 threadsToUse = 10
 # only used if displayUI == True:
 timeSleep = 0.01
@@ -50,7 +51,7 @@ else:
     # Run a reduced outputValues template when batch running
     # this will tell runWorld to store fewer values and should increase speed.
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
-                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0}
+                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0, 'cancelledFares': 0}
     pass
 outputValues = copy.deepcopy(outputValuesTemplate)
 outputValuesArray = [outputValues]
@@ -485,7 +486,7 @@ else:
         # print(
         #    "{0} - Thread {1} started.".format(dateStamp(), i))
 
-    # threads will now be running. set up a curses terminal session.
+    # set up a curses terminal session.
     stdscr = curses.initscr()
     curses.start_color()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
@@ -523,7 +524,8 @@ else:
         linesUsed = 0
         revenues = []
         ttbs = []
-        allSteps = []
+        # allSteps = []
+        fareDrops = []
         threadCount = 0
         for i, thread in enumerate(roboUberThreads):
             if thread.is_alive():
@@ -554,6 +556,7 @@ else:
                 else:
                     stdscr.addstr(
                         linesUsed + 1, 1, completeString, curses.color_pair(3))
+                # end of progress bar, start of revenue
                 stdscr.addstr(
                     linesUsed + 1, len(completeString), "| $", curses.color_pair(1))
                 completeString = completeString + "| $"
@@ -562,21 +565,26 @@ else:
                 stdscr.addstr(
                     linesUsed + 1, len(completeString), nextString, curses.color_pair(3))
                 completeString = completeString + nextString
-
+                # TTB
                 bankruptcyTimes = list(
                     outputValuesArray[i]['timeAtBanktrupcy'].values())
                 if len(bankruptcyTimes) > 0:
                     avg = sum(bankruptcyTimes) / len(bankruptcyTimes)
                 else:
                     avg = 0
-                if 'steps' in outputValuesArray[i]:
-                    steps = outputValuesArray[i]['steps']
-                else:
-                    steps = 0
 
+                # if 'steps' in outputValuesArray[i]:
+                #    steps = outputValuesArray[i]['steps']
+                # else:
+                #    steps = 0
+                #
+                # lastString = " attb: " + \
+                #    (str(avg) + "      ")[:6] + \
+                #    " steps: " + (str(steps) + "      ")[:6]
+                fareDrop = outputValuesArray[i]['cancelledFares']
                 lastString = " attb: " + \
                     (str(avg) + "      ")[:6] + \
-                    " steps: " + (str(steps) + "      ")[:6]
+                    " drops: " + (str(fareDrop) + "      ")[:6]
                 stdscr.addstr(
                     linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
                 completeString = completeString + lastString
@@ -585,7 +593,8 @@ else:
 
                 revenues.append(10*outputValuesArray[i]['dispatcherRevenue'])
                 ttbs.append(avg)
-                allSteps.append(steps)
+                # allSteps.append(steps)
+                fareDrops.append(fareDrop)
                 linesUsed += 1
             except:
                 linesUsed -= 1
@@ -610,8 +619,10 @@ else:
                 linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
             stdscr.addstr(
                 linesUsed + 1, 67, str(round(sum(ttbs) / len(ttbs), 2)), curses.color_pair(4))
+            # stdscr.addstr(
+            #    linesUsed + 1, 81, str(round(sum(allSteps) / len(allSteps), 2)), curses.color_pair(4))
             stdscr.addstr(
-                linesUsed + 1, 81, str(round(sum(allSteps) / len(allSteps), 2)), curses.color_pair(4))
+                linesUsed + 1, 81, str(round(sum(fareDrops) / len(fareDrops), 2)), curses.color_pair(4))
 
             linesUsed += 1
 
