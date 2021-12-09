@@ -372,10 +372,10 @@ class Taxi:
         if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._euclideanDistance, **args)
-        if True:
+        if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficInclusiveEuclidean, **args)
-        if False:
+        if True:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficPredictingEuclidean, **args)
 
