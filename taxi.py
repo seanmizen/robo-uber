@@ -372,10 +372,10 @@ class Taxi:
         if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._euclideanDistance, **args)
-        if True:
+        if False:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficInclusiveEuclidean, **args)
-        if False:
+        if True:
             returnVal = self._aStarSearch(
                 origin, destination, self._trafficPredictingEuclidean, **args)
 
@@ -485,7 +485,7 @@ class Taxi:
     # The same as TIE, but calculate the probable traffic given a history of all traffic.
     # configurable: either all traffic data points, or the last N traffic points
     def _trafficPredictingEuclidean(self, a, b):
-        maxHistory = 20
+        maxHistory = math.inf
         allTrafficPoints = self._trafficHistory[a]
         if len(allTrafficPoints) != 0:
             if maxHistory > len(allTrafficPoints):
