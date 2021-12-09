@@ -485,7 +485,7 @@ class Taxi:
     # The same as TIE, but calculate the probable traffic given a history of all traffic.
     # configurable: either all traffic data points, or the last N traffic points
     def _trafficPredictingEuclidean(self, a, b):
-        maxHistory = math.inf
+        maxHistory = 20
         allTrafficPoints = self._trafficHistory[a]
         if len(allTrafficPoints) != 0:
             if maxHistory > len(allTrafficPoints):
