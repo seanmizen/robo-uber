@@ -521,17 +521,20 @@ class Taxi:
         expanded = {heuristic(origin, destination): {origin: [origin]}}
         while len(expanded) > 0:
             self.steps += 1
-            bestPath = min(expanded.keys())
-            nextExpansion = expanded[bestPath]
+            # index by heuristic distance
+            # search from the next shortest expansion
+            bestTravelTime = min(expanded.keys())
+            nextExpansion = expanded[bestTravelTime]
             if destination in nextExpansion:
                 if 'travelTime' in args:
-                    args['travelTime'][0] = bestPath
+                    args['travelTime'][0] = bestTravelTime
                 return nextExpansion[destination]
             nextNode = nextExpansion.popitem()
             while len(nextExpansion) > 0 and nextNode[0] in args['explored']:
+                # Ignore explored nodes, pop next item
                 nextNode = nextExpansion.popitem()
             if len(nextExpansion) == 0:
-                del expanded[bestPath]
+                del expanded[bestTravelTime]
             if nextNode[0] not in args['explored']:
                 args['explored'][nextNode[0]] = None
                 expansionTargets = [
@@ -539,7 +542,7 @@ class Taxi:
                 while len(expansionTargets) > 0:
                     self.steps += 1
                     expTgt = expansionTargets.pop()
-                    estimatedDistance = bestPath - \
+                    estimatedDistance = bestTravelTime - \
                         heuristic(nextNode[0], destination) + \
                         expTgt[1][1] + heuristic(expTgt[0], destination)
                     if estimatedDistance in expanded:
