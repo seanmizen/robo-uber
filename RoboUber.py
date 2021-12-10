@@ -38,7 +38,7 @@ displayUI = False
 # begs the question: how many threads can python run, total?
 threadsToUse = 10
 # only used if displayUI == True:
-timeSleep = 0.01
+timeSleep = 1
 
 world = worldselector.export()
 
@@ -318,7 +318,7 @@ if displayUI:
                                         round(meshSize[1]/2)),
                                        round(meshSize[0]/2), width)
                 # displaying traffic
-                if True:
+                if False:
                     displayRed = (200, 0, 0)
                     displayYellow = (200, 200, 0)
                     displayGreen = (0, 200, 0)
@@ -377,9 +377,10 @@ if displayUI:
                                                   round(nextNode[1]*meshSize[1]+meshSize[1]/2)), width=3)
                 else:
                     # no taxis out!
-                    print("No taxis out at time {0}".format(curTime))
+                    # print("No taxis out at time {0}".format(curTime))
+                    pass
 
-                # some fares still awaiting a taxi?
+                    # some fares still awaiting a taxi?
                 if len(faresToRedraw) > 0:
                     for fare in faresToRedraw.items():
                         newestFareTime = sorted(list(fare[1].keys()))[-1]

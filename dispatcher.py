@@ -184,14 +184,11 @@ class Dispatcher:
     # clockTick is called by the world and drives the simulation for the Dispatcher. It must, at minimum, handle the
     # 2 main functions the dispatcher needs to run in the world: broadcastFare(origin, destination, price) and
     # allocateFare(origin, taxi).
-    def clockTick(self, parent):
+    def clockTick_new(self, parent):
+        fareMatchings = []
         if self._parent == parent:
             for origin in self._fareBoard.keys():
                 for destination in self._fareBoard[origin].keys():
-                    # TODO - if you can come up with something better. Not essential though.
-                    # not super-efficient here: need times in order, dictionary view objects are not
-                    # sortable because they are an iterator, so we need to turn the times into a
-                    # sorted list. Hopefully fareBoard will never be too big
                     for time in sorted(list(self._fareBoard[origin][destination].keys())):
                         if self._fareBoard[origin][destination][time].price == 0:
                             self._fareBoard[origin][destination][time].price = self._costFare(
@@ -201,8 +198,61 @@ class Dispatcher:
                             self._parent.broadcastFare(origin,
                                                        destination,
                                                        self._fareBoard[origin][destination][time].price)
-                        elif self._fareBoard[origin][destination][time].taxi < 0 and len(self._fareBoard[origin][destination][time].bidders) > 0:
-                            self._allocateFare(origin, destination, time)
+
+                        fareMatchings.extend(
+                            self._allocateFare_Ret(origin, destination, time))
+
+            # Now we have an array of fareMatchings.
+            # Perform an optimising CSP:
+            # Match the taxis and fares up to maximise Utility.
+            # Is this a good time to talk about Nash Equilibrium?
+            # Two taxis might want to go for sub-optimal matchings for greater total revenue... maybe
+            # My algorithm is not that smart
+            # fareMatchings = [(origin, destination, taxiIdx, Utility), ... ]
+            # sort by utility
+
+            fareHeap = heapq.nlargest(len(self._parent._taxis),
+                                      fareMatchings, key=lambda x: x[3])
+
+            taxiCount = sum([taxi.onDuty and len(taxi._path) == 0
+                            for taxi in self._taxis])
+
+            for fare in fareHeap:
+                origin, destination, taxiIdx, utility = fare
+                # Utility should be equal to earnings per timestep.
+                # If Utility is < 1, it's not worth it.
+                worthIt = utility > 1
+                if worthIt:
+                    self._parent.allocateFare(
+                        origin, self._taxis[taxiIdx])
+                    pass
+
+            if False:
+                fareMatchings = sorted(
+                    fareMatchings, key=lambda x: x[3], reverse=True)
+                hasTaxiBeenAllocated = {}
+                hasFareBeenAllocated = {}
+                allocatedTaxis = 0
+                # option 1: simply allocate the highest utilities first
+                # possibly sub-optimal
+                for fare in fareMatchings:
+                    self._callCount += 1
+                    if self._callCount % 100 == 0:
+                        print(self._callCount)
+                    origin, destination, taxiIdx, utility = fare
+                    if taxiIdx not in hasTaxiBeenAllocated:
+                        hasTaxiBeenAllocated[taxiIdx] = False
+                    if (origin, destination) not in hasFareBeenAllocated:
+                        hasFareBeenAllocated[(origin, destination)] = False
+                    if not (hasTaxiBeenAllocated[taxiIdx] or hasFareBeenAllocated[(origin, destination)]):
+                        #self._fareBoard[origin][destination][time].taxi = taxiIdx
+                        self._parent.allocateFare(
+                            origin, self._taxis[taxiIdx])
+                        hasTaxiBeenAllocated[taxiIdx] = True
+                        hasFareBeenAllocated[(origin, destination)] = True
+                        allocatedTaxis += 1
+                        if allocatedTaxis == len(self._taxis):
+                            break
 
     def _performUtilityMatching(self, time):
         # TODO complete this
@@ -220,7 +270,7 @@ class Dispatcher:
         utilityDict[utility] = pairings
         return dict
 
-    def clockTick_Original(self, parent):
+    def clockTick(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
                 for destination in self._fareBoard[origin].keys():
@@ -268,9 +318,9 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
-        if True:
-            self._allocateFare_Original(origin, destination, time)
         if False:
+            self._allocateFare_Original(origin, destination, time)
+        if True:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility1)
         if False:
@@ -278,6 +328,15 @@ class Dispatcher:
                 origin, destination, time, self._fareUtility2)
         if False:
             pass
+
+    def _allocateFare_Ret(self, origin, destination, time):
+        returnVal = []
+        if True:
+            returnVal = self._allocateFareWithUtility_Ret(
+                origin, destination, time, self._fareUtility1)
+        if False:
+            pass
+        return returnVal
 
     def _fareUtility1(self, taxi, origin, destination, time):
         # return farePayout / (how long will it take to get the payout)
@@ -325,7 +384,6 @@ class Dispatcher:
 
     def _allocateFareWithUtility(self, origin, destination, time, utilityMethod):
         allocatedTaxi = -1
-        winnerNode = None
         utilities = {}
         utility = 0
         fareNode = self._parent.getNode(origin[0], origin[1])
@@ -334,7 +392,9 @@ class Dispatcher:
                 if len(self._taxis) > taxiIdx:
                     utility = utilityMethod(
                         self._taxis[taxiIdx], origin, destination, time)
-                    utilities[utility] = taxiIdx
+                    # new addition: Only accept a fare if it is >1 utility
+                    if utility > 1:
+                        utilities[utility] = taxiIdx
                     # If two taxis have identical utility - keep the most recent
 
             if len(utilities) > 0:
@@ -343,6 +403,20 @@ class Dispatcher:
                 self._fareBoard[origin][destination][time].taxi = allocatedTaxi
                 self._parent.allocateFare(
                     origin, self._taxis[allocatedTaxi])
+
+    def _allocateFareWithUtility_Ret(self, origin, destination, time, utilityMethod):
+        taxiFareMatchings = []
+        utility = 0
+        fareNode = self._parent.getNode(origin[0], origin[1])
+        if fareNode is not None:
+            for taxiIdx in self._fareBoard[origin][destination][time].bidders:
+                if len(self._taxis) > taxiIdx:
+                    utility = utilityMethod(
+                        self._taxis[taxiIdx], origin, destination, time)
+                    taxiFareMatchings.append(
+                        (origin, destination, taxiIdx, utility))
+
+        return taxiFareMatchings
 
     def _allocateFare_Original(self, origin, destination, time):
         # a very simple approach here gives taxis at most 5 ticks to respond, which can
