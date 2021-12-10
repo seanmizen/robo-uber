@@ -198,9 +198,9 @@ class Dispatcher:
                             self._parent.broadcastFare(origin,
                                                        destination,
                                                        self._fareBoard[origin][destination][time].price)
-
-                        fareMatchings.extend(
-                            self._allocateFare_Ret(origin, destination, time))
+                        elif self._fareBoard[origin][destination][time].taxi < 0 and len(self._fareBoard[origin][destination][time].bidders) > 0:
+                            fareMatchings.extend(
+                                self._allocateFare_Ret(origin, destination, time))
 
             # Now we have an array of fareMatchings.
             # Perform an optimising CSP:
@@ -318,9 +318,9 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
-        if False:
-            self._allocateFare_Original(origin, destination, time)
         if True:
+            self._allocateFare_Original(origin, destination, time)
+        if False:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility1)
         if False:

@@ -92,9 +92,10 @@ class Taxi:
         # are incidental (i.e. involve no turns or stops or any other remarkable feature)
         self._path = []
         # for part 1C - keep a traffic history.
-        self._trafficHistory = {}
-        for node in self._world._net:
-            self._trafficHistory[node] = []
+        # COMMENTED OUT FOR CODE STABILITY
+        # self._trafficHistory = {}
+        # for node in self._world._net:
+        #    self._trafficHistory[node] = []
         # pick the first available entry point starting from the top left corner if we don't have a
         # preferred choice when coming on duty
         if self._onDutyPos is None:
@@ -194,9 +195,10 @@ class Taxi:
 
         # Getting probabilistic - update the traffic history map.
         # for part 1C
-        for node in self._map:
-            # Do not worry about maxTraffic / Gridlock here - the path planner can do gridlock checks.
-            self._trafficHistory[node].append(world._net[node].traffic)
+        # commented out when not necessary
+        # for node in self._map:
+        # Do not worry about maxTraffic / Gridlock here - the path planner can do gridlock checks.
+        # self._trafficHistory[node].append(world._net[node].traffic)
 
         if self._account == 0:
             # Only update bankruptcy time when taxi hits 0
