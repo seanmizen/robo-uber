@@ -254,22 +254,6 @@ class Dispatcher:
                         if allocatedTaxis == len(self._taxis):
                             break
 
-    def _performUtilityMatching(self, time):
-        # TODO complete this
-        utilityDict = {}
-        pairings = []
-        # (taxi, origin, destination, time)
-        for origin in self._fareBoard.keys():
-            for destination in self._fareBoard[origin].keys():
-                for time in sorted(list(self._fareBoard[origin][destination].keys())):
-                    for taxiIdx in self._fareBoard[origin][destination][time].bidders:
-                        pairing = (self._taxis[taxiIdx],
-                                   origin, destination, time)
-                        pairings.append(pairing)
-        utility = sum(map(self._fareUtility1, pairings))
-        utilityDict[utility] = pairings
-        return dict
-
     def clockTick(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
