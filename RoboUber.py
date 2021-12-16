@@ -33,10 +33,10 @@ normalFontSize = 15
 displaySize = (1024, 768)
 # if displayUI set to true, view the map and use ticks.
 # if displayUI set to false, set ticks = 0 and run x number of threads
-displayUI = True
+displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 10
+threadsToUse = 2
 # only used if displayUI == True:
 timeSleep = 0.1
 
