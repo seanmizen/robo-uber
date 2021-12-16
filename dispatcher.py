@@ -45,6 +45,7 @@ class Dispatcher:
         self._taxis = taxis
         if self._taxis is None:
             self._taxis = []
+        self._taxisServicingFares = 0
         # fareBoard will be a nested dictionary indexed by origin, then destination, then call time.
         # Its values are FareEntries. The nesting structure provides for reasonably fast lookup; it's
         # more or less a multi-level hash.
@@ -178,14 +179,18 @@ class Dispatcher:
         # don't take payments from dodgy alternative universes
         if self._parent == parent:
             self._revenue += amount
+            self._taxisServicingFares -= 1
 
     # ________________________________________________________________________________________________________________
 
     # clockTick is called by the world and drives the simulation for the Dispatcher. It must, at minimum, handle the
     # 2 main functions the dispatcher needs to run in the world: broadcastFare(origin, destination, price) and
     # allocateFare(origin, taxi).
-    def clockTick_new(self, parent):
+    def clockTick(self, parent):
+        taxiCount = sum([taxi.onDuty and len(taxi._path) == 0
+                        for taxi in self._taxis])
         fareMatchings = []
+        fareCount = 0
         if self._parent == parent:
             for origin in self._fareBoard.keys():
                 for destination in self._fareBoard[origin].keys():
@@ -198,9 +203,18 @@ class Dispatcher:
                             self._parent.broadcastFare(origin,
                                                        destination,
                                                        self._fareBoard[origin][destination][time].price)
-                        elif self._fareBoard[origin][destination][time].taxi < 0 and len(self._fareBoard[origin][destination][time].bidders) > 0:
-                            fareMatchings.extend(
-                                self._allocateFare_Ret(origin, destination, time))
+                        elif taxiCount > 0 and self._fareBoard[origin][destination][time].taxi < 0 and len(self._fareBoard[origin][destination][time].bidders) > 0:
+                            newMatchings = self._allocateFare_Ret(
+                                origin, destination, time)
+                            # this is bad - heapq does NOT have a maxHeap implementation!
+                            # we have to negate our utility instead.
+                            # https://stackoverflow.com/questions/2501457/what-do-i-use-for-a-max-heap-implementation-in-python
+                            [heapq.heappush(fareMatchings, (-a[0], a[1], a[2], a[3]))
+                             for a in newMatchings]
+                            fareCount += 1
+
+            if taxiCount == 0:
+                return
 
             # Now we have an array of fareMatchings.
             # Perform an optimising CSP:
@@ -208,24 +222,28 @@ class Dispatcher:
             # Is this a good time to talk about Nash Equilibrium?
             # Two taxis might want to go for sub-optimal matchings for greater total revenue... maybe
             # My algorithm is not that smart
-            # fareMatchings = [(origin, destination, taxiIdx, Utility), ... ]
+            # fareMatchings = [(utility, origin, destination, taxiIdx), ... ]
             # sort by utility
 
-            fareHeap = heapq.nlargest(len(self._parent._taxis),
-                                      fareMatchings, key=lambda x: x[3])
-
-            taxiCount = sum([taxi.onDuty and len(taxi._path) == 0
-                            for taxi in self._taxis])
-
-            for fare in fareHeap:
-                origin, destination, taxiIdx, utility = fare
-                # Utility should be equal to earnings per timestep.
-                # If Utility is < 1, it's not worth it.
-                worthIt = utility > 1
-                if worthIt:
+            # algo 1: get the largest
+            taxisToAllocate = True
+            allocatedTaxis = []
+            allocatedFares = []
+            while taxisToAllocate and len(fareMatchings) > 0:
+                # print("time {0} - fare utilities: {1}".format(self._parent._time,
+                #      str([a[0] for a in fareMatchings])))
+                utility, origin, destination, taxiIdx = heapq.heappop(
+                    fareMatchings)
+                utility = -utility
+                if taxiIdx not in allocatedTaxis and (origin, destination) not in allocatedFares:
+                    allocatedTaxis.append(taxiIdx)
+                    allocatedFares.append((origin, destination))
                     self._parent.allocateFare(
                         origin, self._taxis[taxiIdx])
-                    pass
+                    self._taxisServicingFares += 1
+
+                if len(allocatedTaxis) == taxiCount or len(allocatedTaxis) == fareCount:
+                    taxisToAllocate = False
 
             if False:
                 fareMatchings = sorted(
@@ -254,7 +272,7 @@ class Dispatcher:
                         if allocatedTaxis == len(self._taxis):
                             break
 
-    def clockTick(self, parent):
+    def clockTick_Original(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
                 for destination in self._fareBoard[origin].keys():
@@ -307,9 +325,9 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
-        if True:
-            self._allocateFare_Original(origin, destination, time)
         if False:
+            self._allocateFare_Original(origin, destination, time)
+        if True:
             self._allocateFareWithUtility(
                 origin, destination, time, self._fareUtility1)
         if False:
@@ -382,8 +400,8 @@ class Dispatcher:
                     utility = utilityMethod(
                         self._taxis[taxiIdx], origin, destination, time)
                     # new addition: Only accept a fare if it is >1 utility
-                    if utility > 1:
-                        utilities[utility] = taxiIdx
+                    # if utility > 1:
+                    utilities[utility] = taxiIdx
                     # If two taxis have identical utility - keep the most recent
 
             if len(utilities) > 0:
@@ -403,7 +421,7 @@ class Dispatcher:
                     utility = utilityMethod(
                         self._taxis[taxiIdx], origin, destination, time)
                     taxiFareMatchings.append(
-                        (origin, destination, taxiIdx, utility))
+                        (utility, origin, destination, taxiIdx))
 
         return taxiFareMatchings
 

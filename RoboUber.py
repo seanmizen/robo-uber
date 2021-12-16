@@ -36,7 +36,7 @@ displaySize = (1024, 768)
 displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 2
+threadsToUse = 5
 # only used if displayUI == True:
 timeSleep = 0.1
 
@@ -635,11 +635,11 @@ else:
 
         stdscr.refresh()
 
-    for i in range(10, 0, -1):
+    for i in range(6000, 0, -1):
         stdscr.addstr(
             0, 6, "{0} - {1} threads running.    ".format(dateStamp(), 0))
         stdscr.addstr(
-            0, 52, "Simulation will close in {0}   ".format((str(i) + "   ")[:3]))
+            0, 52, "Simulation will close in {0}   ".format((str(i) + "      ")[:6]))
         stdscr.addstr(0, 0, "")
         stdscr.refresh()
         time.sleep(1)
