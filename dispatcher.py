@@ -391,6 +391,10 @@ class Dispatcher:
             accountBeforeFare = taxi._account
             accountAfterFare = accountBeforeFare + farePayout + \
                 (fareJourneyTime + travelToFareTime)
+            if accountBeforeFare < 1:
+                # stop worrying about improvement once you're bankrupt.
+                # also avoid div/0 problems :)
+                accountBeforeFare = 1
             returnVal = accountAfterFare / accountBeforeFare
         return returnVal
 
