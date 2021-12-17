@@ -185,6 +185,7 @@ class Dispatcher:
     # 2 main functions the dispatcher needs to run in the world: broadcastFare(origin, destination, price) and
     # allocateFare(origin, taxi).
     def clockTick(self, parent):
+        # This version is the Optimiser ClockTick
         taxiCount = sum([taxi.onDuty and len(taxi._path) == 0
                         for taxi in self._taxis])
         fareMatchings = []
