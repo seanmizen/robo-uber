@@ -233,7 +233,7 @@ class Dispatcher:
                 utility, origin, destination, taxiIdx = heapq.heappop(
                     fareMatchings)
                 utility = -utility
-                if utility < 1 and False:
+                if utility < 1:
                     # enabling this section will only allow >1 utilities!
                     pass
                 elif taxiIdx not in allocatedTaxis and (origin, destination) not in allocatedFares:
@@ -345,7 +345,7 @@ class Dispatcher:
         returnVal = []
         if True:
             returnVal = self._allocateFareWithUtility_Ret(
-                origin, destination, time, self._fareUtility2)
+                origin, destination, time, self._fareUtility1)
         if False:
             pass
         return returnVal
