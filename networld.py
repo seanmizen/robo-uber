@@ -946,9 +946,13 @@ class NetWorld:
         # fare may have abandoned the attempt, while the taxi may have gone off-duty
         if origin not in self._fareQ or taxi not in self._taxis or not taxi.onDuty:
             return False
+        assigned = taxi.recvMsg(taxi.FARE_ALLOC, **{'origin': origin,
+                                                    'destination': self._fareQ[origin].destination})
+        if not assigned:
+            return False
         self._fareQ[origin].assignTaxi(taxi)
-        taxi.recvMsg(taxi.FARE_ALLOC, **{'origin': origin,
-                     'destination': self._fareQ[origin].destination})
+        # return True to indicate success to the dispatcher
+        return True
 
     # cancelFare is called by the Dispatcher when a fare abandons their request, and informs any allocated
     # taxi so that they don't need to chase a nonexistent fare. This will also help taxis to estimate
@@ -1042,8 +1046,8 @@ class NetWorld:
                             self._time: (node.traffic, node.maxTraffic)}
 
             # next go through the (live) taxis
-            if 'calls' in outputs:
-                outputs['calls'] = 0
+            # if 'calls' in outputs:
+            #    outputs['calls'] = 0
             if 'steps' in outputs:
                 outputs['steps'] = 0
             for taxi in self._taxis.items():
@@ -1051,8 +1055,8 @@ class NetWorld:
                     outputs['timeAtBanktrupcy'][taxi[0].number] = 0
                 elif taxi[0]._timeAtBankruptcy != 0:
                     outputs['timeAtBanktrupcy'][taxi[0].number] = taxi[0]._timeAtBankruptcy
-                if 'calls' in outputs:
-                    outputs['calls'] += taxi[0].calls
+                # if 'calls' in outputs:
+                #    outputs['calls'] += taxi[0].calls
                 if 'steps' in outputs:
                     outputs['steps'] += taxi[0].steps
 
@@ -1088,6 +1092,7 @@ class NetWorld:
             # to the dispatcher. We can make this fully asynchronous if we wish with an event queue.
             if self._dispatcher is not None:
                 self._dispatcher.clockTick(self)
+                outputs['calls'] = self._dispatcher._calls
             # new traffic arrives last. Since we flow old traffic out of Nodes first, this gives
             # taxis the best chance to reach a Node, they shouldn't be helplessly stuck whilst
             # traffic flows around them.

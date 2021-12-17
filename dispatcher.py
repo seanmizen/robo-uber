@@ -45,13 +45,13 @@ class Dispatcher:
         self._taxis = taxis
         if self._taxis is None:
             self._taxis = []
-        self._taxisServicingFares = 0
         # fareBoard will be a nested dictionary indexed by origin, then destination, then call time.
         # Its values are FareEntries. The nesting structure provides for reasonably fast lookup; it's
         # more or less a multi-level hash.
         self._fareBoard = {}
         # serviceMap gives the dispatcher its service area
         self._map = serviceMap
+        self._calls = 0
 
     # _________________________________________________________________________________________________________
     # methods to add objects to the Dispatcher's knowledge base
@@ -179,8 +179,6 @@ class Dispatcher:
         # don't take payments from dodgy alternative universes
         if self._parent == parent:
             self._revenue += amount
-            self._taxisServicingFares -= 1
-
     # ________________________________________________________________________________________________________________
 
     # clockTick is called by the world and drives the simulation for the Dispatcher. It must, at minimum, handle the
@@ -236,12 +234,14 @@ class Dispatcher:
                     fareMatchings)
                 utility = -utility
                 if taxiIdx not in allocatedTaxis and (origin, destination) not in allocatedFares:
-                    allocatedTaxis.append(taxiIdx)
-                    allocatedFares.append((origin, destination))
-                    self._parent.allocateFare(
+                    allocated = self._parent.allocateFare(
                         origin, self._taxis[taxiIdx])
-                    self._taxisServicingFares += 1
-
+                    if not allocated:
+                        # networld disallowed this fare. keep trying
+                        pass
+                    else:
+                        allocatedTaxis.append(taxiIdx)
+                        allocatedFares.append((origin, destination))
                 if len(allocatedTaxis) == taxiCount or len(allocatedTaxis) == fareCount:
                     taxisToAllocate = False
 
@@ -325,6 +325,7 @@ class Dispatcher:
     # action. You should be able to do better than that using some form of CSP solver (this is just a suggestion,
     # other methods are also acceptable and welcome).
     def _allocateFare(self, origin, destination, time):
+        self._calls += 1
         if False:
             self._allocateFare_Original(origin, destination, time)
         if True:
@@ -337,6 +338,7 @@ class Dispatcher:
             pass
 
     def _allocateFare_Ret(self, origin, destination, time):
+        self._calls += 1
         returnVal = []
         if True:
             returnVal = self._allocateFareWithUtility_Ret(

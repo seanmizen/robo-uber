@@ -335,25 +335,28 @@ class Taxi:
             callTime = self._world.simTime
             self._availableFares[callTime, args['origin'][0], args['origin'][1]] = FareInfo(
                 args['destination'], args['price'])
-            return
+            return True
         # the dispatcher has approved our bid: mark the fare as ours
         elif msg == self.FARE_ALLOC:
             for fare in self._availableFares.items():
                 if fare[0][1] == args['origin'][0] and fare[0][2] == args['origin'][1]:
                     if fare[1].destination[0] == args['destination'][0] and fare[1].destination[1] == args['destination'][1]:
                         fare[1].allocated = True
-                        return
+                        return True
         # we just dropped off a fare and received payment, add it to the account
         elif msg == self.FARE_PAY:
             self._account += args['amount']
-            return
+            return True
         # a fare cancelled before being collected, remove it from the list
         elif msg == self.FARE_CANCEL:
             for fare in self._availableFares.items():
                 # and fare[1].allocated:
                 if fare[0][1] == args['origin'][0] and fare[0][2] == args['origin'][1]:
                     del self._availableFares[fare[0]]
-                    return
+                    return True
+        # if we didn't get the result we wanted, return false.
+        # hopefully this solves our issue.
+        return False
     # _____________________________________________________________________________________________________________________
 
     ''' HERE IS THE PART THAT YOU NEED TO MODIFY
