@@ -36,7 +36,7 @@ displaySize = (1024, 768)
 displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 5
+threadsToUse = 20
 # only used if displayUI == True:
 timeSleep = 0.1
 
@@ -425,6 +425,8 @@ if displayUI:
                     values['cancelledFares']))
                 addLabel("Dispatch revenue: ", "£{0}".format(
                     round(values['dispatcherRevenue'], 2)))
+                addLabel("Calls: ", "{0}".format(
+                    values['calls']))
                 addLabel()
                 addLabel("Map Details:")
                 addLabel("Streets: ", "{0}".format(
@@ -515,7 +517,8 @@ else:
         for i, thread in enumerate(roboUberThreads):
             threadsStarted[i] = True
             thread.start()
-
+    # This is for show more than anything - start a separate thread to start our threads.
+    # It's quite pretty when you see it run.
     a = threading.Thread(target=startThreads)
     a.start()
 
@@ -574,14 +577,14 @@ else:
                 else:
                     avg = 0
 
-                # if 'steps' in outputValuesArray[i]:
-                #    steps = outputValuesArray[i]['steps']
-                # else:
-                #    steps = 0
-                #
+                if 'calls' in outputValuesArray[i]:
+                    calls = outputValuesArray[i]['calls']
+                else:
+                    calls = 0
+
                 # lastString = " attb: " + \
                 #    (str(avg) + "      ")[:6] + \
-                #    " steps: " + (str(steps) + "      ")[:6]
+                #    " calls: " + (str(calls) + "        ")[:8]
                 fareDrop = outputValuesArray[i]['cancelledFares']
                 lastString = " attb: " + \
                     (str(avg) + "      ")[:6] + \
@@ -617,6 +620,8 @@ else:
                 except:
                     pass
             stdscr.addstr(
+                0, 6, "{0} - {1} threads running.    ".format(dateStamp(), threadCount))
+            stdscr.addstr(
                 linesUsed + 1, 53, str(round(sum(revenues) / len(revenues), 2)), curses.color_pair(4))
             stdscr.addstr(
                 linesUsed + 1, 67, str(round(sum(ttbs) / len(ttbs), 2)), curses.color_pair(4))
@@ -626,10 +631,7 @@ else:
                 linesUsed + 1, 81, str(round(sum(fareDrops) / len(fareDrops), 2)), curses.color_pair(4))
 
             linesUsed += 1
-
-            stdscr.addstr(
-                0, 6, "{0} - {1} threads running.    ".format(dateStamp(), threadCount))
-            stdscr.addstr(0, 0, "")
+            stdscr.addstr(linesUsed+1, 0, "")
         except:
             pass
 
