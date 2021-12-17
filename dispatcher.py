@@ -184,7 +184,7 @@ class Dispatcher:
     # clockTick is called by the world and drives the simulation for the Dispatcher. It must, at minimum, handle the
     # 2 main functions the dispatcher needs to run in the world: broadcastFare(origin, destination, price) and
     # allocateFare(origin, taxi).
-    def clockTick(self, parent):
+    def clockTick_optimiser(self, parent):
         taxiCount = sum([taxi.onDuty and len(taxi._path) == 0
                         for taxi in self._taxis])
         fareMatchings = []
@@ -272,7 +272,7 @@ class Dispatcher:
                         if allocatedTaxis == len(self._taxis):
                             break
 
-    def clockTick_Original(self, parent):
+    def clockTick(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
                 for destination in self._fareBoard[origin].keys():
