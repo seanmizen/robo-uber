@@ -248,33 +248,6 @@ class Dispatcher:
                 if len(allocatedTaxis) == taxiCount or len(allocatedTaxis) == fareCount:
                     taxisToAllocate = False
 
-            if False:
-                fareMatchings = sorted(
-                    fareMatchings, key=lambda x: x[3], reverse=True)
-                hasTaxiBeenAllocated = {}
-                hasFareBeenAllocated = {}
-                allocatedTaxis = 0
-                # option 1: simply allocate the highest utilities first
-                # possibly sub-optimal
-                for fare in fareMatchings:
-                    self._callCount += 1
-                    if self._callCount % 100 == 0:
-                        print(self._callCount)
-                    origin, destination, taxiIdx, utility = fare
-                    if taxiIdx not in hasTaxiBeenAllocated:
-                        hasTaxiBeenAllocated[taxiIdx] = False
-                    if (origin, destination) not in hasFareBeenAllocated:
-                        hasFareBeenAllocated[(origin, destination)] = False
-                    if not (hasTaxiBeenAllocated[taxiIdx] or hasFareBeenAllocated[(origin, destination)]):
-                        #self._fareBoard[origin][destination][time].taxi = taxiIdx
-                        self._parent.allocateFare(
-                            origin, self._taxis[taxiIdx])
-                        hasTaxiBeenAllocated[taxiIdx] = True
-                        hasFareBeenAllocated[(origin, destination)] = True
-                        allocatedTaxis += 1
-                        if allocatedTaxis == len(self._taxis):
-                            break
-
     def clockTick_original(self, parent):
         if self._parent == parent:
             for origin in self._fareBoard.keys():
