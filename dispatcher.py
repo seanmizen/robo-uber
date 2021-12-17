@@ -233,7 +233,7 @@ class Dispatcher:
                 utility, origin, destination, taxiIdx = heapq.heappop(
                     fareMatchings)
                 utility = -utility
-                if utility > 1:
+                if utility < 1 and False:
                     # enabling this section will only allow >1 utilities!
                     pass
                 elif taxiIdx not in allocatedTaxis and (origin, destination) not in allocatedFares:
@@ -389,13 +389,16 @@ class Dispatcher:
         if fareJourneyTime > -1 and travelToFareTime > -1:
             farePayout = self._fareBoard[origin][destination][time].price
             accountBeforeFare = taxi._account
-            accountAfterFare = accountBeforeFare + farePayout + \
+            accountAfterFare = accountBeforeFare + farePayout - \
                 (fareJourneyTime + travelToFareTime)
             if accountBeforeFare < 1:
                 # stop worrying about improvement once you're bankrupt.
                 # also avoid div/0 problems :)
                 accountBeforeFare = 1
-            returnVal = accountAfterFare / accountBeforeFare
+            # if accountAfterFare < 1:
+            #    returnVal = - 100 + farePayout
+            else:
+                returnVal = accountAfterFare / accountBeforeFare
         return returnVal
 
     def _allocateFareWithUtility(self, origin, destination, time, utilityMethod):

@@ -592,8 +592,8 @@ else:
                 stdscr.addstr(
                     linesUsed + 1, len(completeString), lastString, curses.color_pair(1))
                 completeString = completeString + lastString
-                # stdscr.addstr(
-                #    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
+                stdscr.addstr(
+                    linesUsed + 1, len(completeString), str(bankruptcyTimes), curses.color_pair(1))
 
                 revenues.append(10*outputValuesArray[i]['dispatcherRevenue'])
                 ttbs.append(avg)
