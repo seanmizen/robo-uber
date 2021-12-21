@@ -36,7 +36,7 @@ displaySize = (1024, 768)
 displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 20
+threadsToUse = 5
 # only used if displayUI == True:
 timeSleep = 0.1
 
