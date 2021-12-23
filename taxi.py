@@ -1,7 +1,8 @@
 import math
-#from typing_extensions import TypeVarTuple
+# from typing_extensions import TypeVarTuple
 import numpy as np
 import heapq
+import bisect
 
 # a data container object for the taxi's internal list of fares. This
 # tells the taxi what fares are available to what destinations at
@@ -120,9 +121,20 @@ class Taxi:
         # the dictionary items, meanwhile, contain a FareInfo object with the price, the destination, and whether
         # or not this taxi has been allocated the fare (and thus should proceed to collect them ASAP from the origin)
         self._availableFares = {}
+        # Utility rankings for fare bidding
+        self._fareUtilityRankings = []
+        self._fareDensityRankings = []
+        # streetmap for easy node / streedID lookups
+        # streetFareCount is where we will store a count of each fare.
+        self._streetMap = self._generateStreetMap()
+        self._streetFareCount = {}
+        streetIDs = set(value for value in self._streetMap.values())
+        for streetID in streetIDs:
+            self._streetFareCount[streetID] = 0
 
     # This property allows the dispatcher to query the taxi's location directly. It's like having a GPS transponder
     # in each taxi.
+
     @property
     def currentLocation(self):
         if self._loc is None:
@@ -217,6 +229,9 @@ class Taxi:
             # obviously, if we have a fare aboard, we expect to have reached their destination,
             # so drop them off.
             if self._passenger is not None:
+                # update rankings - delete them all. this can be done on pickup, but doesn't hurt to do it on dropoff either.
+                self._fareUtilityRankings = []
+                self._fareDensityRankings = []
                 if self._loc.dropoffFare(self._passenger, self._direction):
                     self._passenger = None
                 # failure to drop off means probably we're not at the destination. But check
@@ -591,13 +606,118 @@ class Taxi:
         # no need, therefore, to expand the path for the higher-level call, this is a dead end.
         return []
 
+    # _____________________________________________________________________________________________________________________
+
+    def _fareUtility1(self, time, origin, destination, price):
+        # DUPLICATE OF DISPATCHER FAREUTILITY1 - minor adjustments
+        # return farePayout / (how long will it take to get the payout)
+        # make use of the taxi's routefinder. It is a private method, but it's very useful.
+        # fareJourneyTime = the actual fare's itineary time
+        # travelToFareTime = how long it will take to reach the fare
+        fareJourneyTime = -1
+        travelToFareTime = -1
+        args = {'travelTime': []}
+        fareJourneyPath = self._planPath(
+            origin, destination, **args)
+        fareJourneyTime = args['travelTime'][0]
+        fareTravelPath = self._planPath(
+            self.currentLocation, origin, **args)
+        travelToFareTime = args['travelTime'][0]
+        returnVal = 0
+        if fareJourneyTime > -1 and travelToFareTime > -1:
+            returnVal = price / \
+                (fareJourneyTime + travelToFareTime)
+        return returnVal
+
+    def _generateStreetMap(self):
+        # generateStreepMap is called once at the beginning of the simulation.
+        # the dictionary of node: street#
+        # there are 396 nodes, 58 streets. We will use the resulting dictionary (and the streets) to help categorise fare density zones.
+        def getNode(myTup):
+            return ((myTup[1], myTup[2]), self._world._net[(myTup[1], myTup[2])])
+        # create dict of (location): streetID mappings - this will be how we group our fare densities.
+        origin = getNode((0, 0, 0))
+        # currentNode = origin[0]
+        # nextNode = ((origin[1].neighbours[0][1], origin[1].neighbours[0]
+        #            [2]), origin[1]._neighbours[origin[1].neighbours[0][0]])
+        nextNode = getNode(origin[1].neighbours[0])
+        explored = [origin[0]]
+        streetID = 0
+        nodeStreetMap = {}
+        nodeStreetMap[origin[0]] = streetID
+        streetsToStart = []
+        while len(nodeStreetMap.keys()) < self._world.size:
+            nodeStreetMap[nextNode[0]] = streetID
+            explored.append(nextNode[0])
+            if len(nextNode[1].neighbours) == 2:
+                neighbourSelected = False
+                for neighbour in nextNode[1].neighbours:
+                    if (neighbour[1], neighbour[2]) not in explored:
+                        nextNode = getNode(neighbour)
+                        neighbourSelected = True
+                        break
+                if not neighbourSelected:
+                    nextNode = getNode(streetsToStart.pop())
+                    streetID += 1
+            elif len(nextNode[1].neighbours) == 1:
+                # nothing to do - the node is already assigned a street.
+                # get our nextNode out of the streetsToStart list.
+                nextNode = getNode(streetsToStart.pop())
+                streetID += 1
+                pass
+            else:
+                # neighbours > 2
+                streetID += 1
+                for neighbour in nextNode[1].neighbours:
+                    if (neighbour[1], neighbour[2]) not in explored:
+                        streetsToStart.append(neighbour)
+                if len(streetsToStart) > 0:
+                    nextNode = getNode(streetsToStart.pop())
+                else:
+                    break
+        return nodeStreetMap
+
+    def _fareDensity(self, destination):
+        # streetMap contains our street IDs indexed by node
+        # streetFareCount is our count of total fares - TODO make this smarter!
+        return self._streetFareCount[self._streetMap[destination]]
+
+    def _bidSystem1(self, time, origin, destination, price):
+        fareUtility = self._fareUtility1(
+            time, origin, destination, price)
+        fareDensity = self._fareDensity(destination)
+        bisect.insort(self._fareUtilityRankings,
+                      (fareUtility, (origin, destination)))
+        bisect.insort(self._fareDensityRankings,
+                      (fareDensity, (origin, destination)))
+
+        utilityRank = self._fareUtilityRankings.index(
+            (fareUtility, (origin, destination)))
+        densityRank = self._fareDensityRankings.index(
+            (fareDensity, (origin, destination)))
+
+        # If utilityRank is higher than densityRank, we know this fare will be prioritised
+        # by the dispatcher even though we don't want it to be prioritised. Block its bid.
+        if utilityRank > densityRank:
+            return False
+        else:
+            return True
+
+    def _bidSystem2(self, time, origin, destination, price):
+        return False
+
     # TODO
     # this function decides whether to offer a bid for a fare. In general you can consider your current position, time,
     # financial state, the collection and dropoff points, the time the fare called - or indeed any other variable that
     # may seem relevant to decide whether to bid. The (crude) constraint-satisfaction method below is only intended as
     # a hint that maybe some form of CSP solver with automated reasoning might be a good way of implementing this. But
     # other methodologies could work well. For best results you will almost certainly need to use probabilistic reasoning.
+
     def _bidOnFare(self, time, origin, destination, price):
+
+        # bidSystem1: "Is this fare's FU ranking worse than it's FD ranking? If so, accept it."
+        bidSystemAccepted = self._bidSystem1(time, origin, destination, price)
+
         NoCurrentPassengers = self._passenger is None
         NoAllocatedFares = len(
             [fare for fare in self._availableFares.values() if fare.allocated]) == 0
@@ -619,6 +739,7 @@ class Taxi:
         CloseEnough = CanAffordToDrive and WillArriveOnTime
         Worthwhile = PriceBetterThanCost and NotCurrentlyBooked
         Bid = CloseEnough and Worthwhile
+        Bid = Bid and bidSystemAccepted
         return Bid
 
     def _bidOnFare_Original(self, time, origin, destination, price):
