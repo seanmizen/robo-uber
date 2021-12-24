@@ -1059,6 +1059,10 @@ class NetWorld:
                 #    outputs['calls'] += taxi[0].calls
                 if 'steps' in outputs:
                     outputs['steps'] += taxi[0].steps
+                if 'kCentres' in outputs:
+                    if taxi[0].number not in outputs['kCentres']:
+                        outputs['kCentres'][taxi[0].number] = {}
+                    outputs['kCentres'][taxi[0].number][self._time] = taxi[0]._kCentres
 
                 if taxi[0].onDuty:
                     taxi[0].drive(taxi[1])

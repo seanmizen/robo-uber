@@ -36,9 +36,9 @@ displaySize = (1024, 768)
 displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 1
+threadsToUse = 20
 # only used if displayUI == True:
-timeSleep = 0.01
+timeSleep = 1
 
 world = worldselector.export()
 
@@ -331,12 +331,12 @@ if displayUI:
                         elif traffic > 0:
                             drawTraffic(node, displayGreen, traffic)
 
-                # get fares and taxis that need to be redrawn. We find these by checking the recording dicts
-                # for time points in advance of our current display timepoint. The nested comprehensions
-                # look formidable, but are simply extracting members with a time stamp ahead of our
-                # most recent display time. The odd indexing fare[1].keys()[-1] gets the last element
-                # in the time sequence dictionary for a fare (or taxi), which, because of the way this
-                # is recorded, is guaranteed to be the most recent entry.
+                    # get fares and taxis that need to be redrawn. We find these by checking the recording dicts
+                    # for time points in advance of our current display timepoint. The nested comprehensions
+                    # look formidable, but are simply extracting members with a time stamp ahead of our
+                    # most recent display time. The odd indexing fare[1].keys()[-1] gets the last element
+                    # in the time sequence dictionary for a fare (or taxi), which, because of the way this
+                    # is recorded, is guaranteed to be the most recent entry.
                 faresToRedraw = dict([(fare[0], dict([(time[0], time[1])
                                                       for time in fare[1].items()
                                                       if time[0] > curTime]))
@@ -346,8 +346,7 @@ if displayUI:
                 a = str(len(taxi0.items()))
                 b = str(sorted(list(taxi0.keys()))[-1])
                 c = str(curTime)
-
-                print(c + ": " + a + " - " + b)
+                #print(c + ": " + a + " - " + b)
 
                 taxisToRedraw = dict([(taxi[0], dict([(taxiPos[0], taxiPos[1])
                                                       for taxiPos in taxi[1].items()
@@ -359,7 +358,7 @@ if displayUI:
                 if noTaxisDrawn:
                     ntdString == " !!!"
 
-                #print(c + ": " + a + " - " + b + ntdString)
+                # print(c + ": " + a + " - " + b + ntdString)
 
                 # some taxis are on duty?
                 if len(taxisToRedraw) > 0:
@@ -391,6 +390,21 @@ if displayUI:
                     # no taxis out!
                     # print("No taxis out at time {0}".format(curTime))
                     pass
+
+                # displaying k-centres
+                print(str(curTime))
+                if True:
+                    displayPurple = (200, 0, 200)
+                    for taxiIdx, taxi in enumerate(values['taxis'].items()):
+                        if taxi[0] in values['kCentres']:
+                            if taxi[0] not in taxiColours and len(taxiPalette) > 0:
+                                taxiColours[taxi[0]] = taxiPalette[taxiIdx %
+                                                                   len(taxiPalette)]
+
+                            if curTime in values['kCentres'][taxi[0]]:
+                                for node in values['kCentres'][taxi[0]][curTime]:
+                                    drawTraffic(
+                                        node, taxiColours[taxi[0]], traffic)
 
                     # some fares still awaiting a taxi?
                 if len(faresToRedraw) > 0:

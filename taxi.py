@@ -3,7 +3,6 @@ import math
 import numpy as np
 import heapq
 import bisect
-
 from numpy.random.mtrand import random
 
 # a data container object for the taxi's internal list of fares. This
@@ -45,6 +44,10 @@ class Taxi:
     FARE_ALLOC = 2
     FARE_PAY = 3
     FARE_CANCEL = 4
+    # lastKnownTaxiCount is used to keep track of whether to recompute K-centres.
+    _lastKnownTaxiCount = 0
+    _kCentres = []
+    KCENTRES = True
 
     '''constructor. The only required arguments are the world the taxi operates in and the taxi's number.
          optional arguments are:
@@ -133,9 +136,7 @@ class Taxi:
         streetIDs = set(value for value in self._streetMap.values())
         for streetID in streetIDs:
             self._streetFareCount[streetID] = 0
-        # lastKnownTaxiCount is used to keep track of whether to recompute K-centres.
-        self._lastKnownTaxiCount = 0
-        self._kCentres = []
+        self._kCentrePath = []
 
     # This property allows the dispatcher to query the taxi's location directly. It's like having a GPS transponder
     # in each taxi.
@@ -217,11 +218,12 @@ class Taxi:
         #    self._trafficHistory[node].append(world._net[node].traffic)
 
         # Tangential to part 3: build a k-centres list if necessary.
-        taxisOut = sum(
-            1 if taxi[0].onDuty else 0 for taxi in world._taxis.items())
-        if taxisOut != self._lastKnownTaxiCount:
-            self._lastKnownTaxiCount = taxisOut
-            self._kCentres = self.kCentres(world, taxisOut)
+        if self.KCENTRES:
+            taxisOut = sum(
+                1 if taxi[0].onDuty else 0 for taxi in world._taxis.items())
+            if taxisOut != self._lastKnownTaxiCount:
+                self.updateKCentre(self._calculateKCentres(world, taxisOut))
+                self.updateLastKnownTaxiCount(taxisOut)
 
         # sum(1 if meets_condition(x) else 0 for x in my_list)
         if self._account == 0:
@@ -251,6 +253,15 @@ class Taxi:
                 elif self._passenger.destination != self._loc.index:
                     self._path = self._planPath(
                         self._loc.index, self._passenger.destination)
+            else:
+                if self.KCENTRES:
+                    # no path, no passenger. Calculate your best k-centre.
+                    bestKCentre = self._findBestKCentre(world)
+                    if bestKCentre is not None:
+                        self._kCentrePath = self._planPath(
+                            self._loc.index, bestKCentre)
+                        a = 1
+
             # decide what to do about available fares. This can be done whenever, but should be done
             # after we have dropped off fares so that they don't complicate decisions.
             faresToRemove = []
@@ -284,20 +295,27 @@ class Taxi:
                 # may want to bid on available fares. This could be done at any point here, it
                 # doesn't need to be a particularly early or late decision amongst the things to do.
                 elif fare[1].bid == 0:
+                    if self._bidOnFare(fare[0][0], origin, destination, fare[1].price):
+                        world.transmitFareBid(origin, self)
+                        fare[1].bid = 1
+                    else:
+                        fare[1].bid = -1
+
                     # register fares first, we will make a second pass through availableFares to make our bids.
-                    self._bidSystemRegisterFare(
-                        fare[0][0], origin, destination, fare[1].price)
+                    # self._bidSystemRegisterFare(
+                    #    fare[0][0], origin, destination, fare[1].price)
             for expired in faresToRemove:
                 del self._availableFares[expired]
-            # second pass to now act on valid bids.
-            for fare in self._availableFares.items():
-                origin = (fare[0][1], fare[0][2])
-                destination = fare[1].destination
-                if self._bidOnFare(fare[0][0], origin, destination, fare[1].price):
-                    world.transmitFareBid(origin, self)
-                    fare[1].bid = 1
-                else:
-                    fare[1].bid = -1
+            if False:
+                # second pass to now act on valid bids.
+                for fare in self._availableFares.items():
+                    origin = (fare[0][1], fare[0][2])
+                    destination = fare[1].destination
+                    if self._bidOnFare(fare[0][0], origin, destination, fare[1].price):
+                        world.transmitFareBid(origin, self)
+                        fare[1].bid = 1
+                    else:
+                        fare[1].bid = -1
 
                 # may want to do something active whilst enroute - this simple default version does
                 # nothing, but that is probably not particularly 'intelligent' behaviour.
@@ -309,7 +327,8 @@ class Taxi:
         self._account -= 1
 
     # Calculate the ideal "idle" spots for all k taxis.
-    def kCentres(self, world, k):
+    def _calculateKCentres(self, world, k):
+        print("Recalculating k-centres)")
         # uses a modified Gon algorithm to find ourselves k centres to gravitate the taxis to.
         # our variation: while calculating new centres, treat the map edges as an infinite wall of centres.
         # https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8792058
@@ -349,9 +368,52 @@ class Taxi:
 
         return centres
 
+    def _findBestKCentre(self, world):
+        bestKCentre = None
+
+        def taxiKCentreList(taxi):
+            taxiDistanceTuples = []
+            for centre in self._kCentres:
+                taxiDistanceTuples.append(
+                    (self._euclideanDistance(taxi.currentLocation, centre), taxi.number, centre))
+            return taxiDistanceTuples
+        distanceTuples = []
+        for taxi in world._taxis:
+            distanceTuples.extend(taxiKCentreList(taxi))
+
+        distanceTuples.sort()
+
+        # greedyMatch k-Centres to taxis.
+        assignedTaxis = []
+        assignedKCentres = []
+        assignments = {}
+        for taxiKCentreMatching in distanceTuples:
+            _, taxi, kCentre = taxiKCentreMatching
+            if taxi not in assignedTaxis and kCentre not in assignedKCentres:
+                assignments[taxi] = kCentre
+                assignedTaxis.append(taxi)
+                assignedKCentres.append(kCentre)
+            if len(assignedKCentres) == len(self._kCentres):
+                break
+        if self.number in assignments:
+            bestKCentre = assignments[self.number]
+        else:
+            bestKCentre = None
+
+        return bestKCentre
+
+    @classmethod
+    def updateKCentre(cls, kCentres):
+        cls._kCentres += kCentres
+
+    @classmethod
+    def updateLastKnownTaxiCount(cls, kCentres):
+        cls._lastKnownTaxiCount += kCentres
+
     # called automatically by the taxi's world to update its position. If the taxi has indicated a
     # turn or that it is going straight through (i.e., it's not stopping here), drive will
     # move the taxi on to the next Node once it gets the green light.
+
     def drive(self, newPose):
         # as long as we are not stopping here,
 
@@ -370,6 +432,11 @@ class Taxi:
                     self._nextLoc = None
                     self._nextDirection = -1
                     # not yet at the destination?
+
+                    if len(self._kCentrePath) > 0:
+                        if self._kCentrePath[0][0] == self._loc.index[0] and self._kCentrePath[0][1] == self._loc.index[1]:
+                            self._kCentrePath.pop(0)
+
                     if len(self._path) > 0:
                         #  if we have reached the next path waypoint, pop it.
                         if self._path[0][0] == self._loc.index[0] and self._path[0][1] == self._loc.index[1]:
@@ -381,12 +448,31 @@ class Taxi:
                             self._nextLoc = nextNode[0]
                             self._nextDirection = nextNode[1]
                             return
+        elif self._nextLoc is None and len(self._path) == 0 and len(self._kCentrePath) > 0:
+            # No fare to service. Idly travel towards the closest k-centre.
+            if self._kCentrePath[0] == self._loc.index:
+                self._kCentrePath.pop(0)
+            if len(self._kCentrePath) > 0:
+                if self._kCentrePath[0] in self._map[self._loc.index]:
+                    nextNode = self._loc.turn(
+                        self._direction, self._map[self._loc.index][self._kCentrePath[0]][0])
+                    self._nextLoc = nextNode[0]
+                    self._nextDirection = nextNode[1]
+                    if self._nextLoc is not None:
+                        print("Taxi " + str(self.number) +
+                              " driving to k-centre " + str(self._kCentrePath[-1]))
+                        self.drive((self._nextLoc, self._nextDirection))
+
         # Either get underway or move from an intermediate waypoint. Both of these could be
         # a change of direction
         if self._nextLoc is None and len(self._path) > 0:
             #  if we are resuming from a previous path point, just pop the path
             if self._path[0][0] == self._loc.index[0] and self._path[0][1] == self._loc.index[1]:
                 self._path.pop(0)
+            elif len(self._kCentrePath) > 0:
+                if self._kCentrePath[0][0] == self._loc.index[0] and self._kCentrePath[0][1] == self._loc.index[1]:
+                    self._kCentrePath.pop(0)
+
             # we had better be in a known position!
             if self._loc.index not in self._map:
                 raise IndexError("Fell of the edge of the world! Index ({0},{1}) is not in this taxi's map".format(
