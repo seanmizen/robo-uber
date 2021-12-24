@@ -319,7 +319,7 @@ class Dispatcher:
         returnVal = []
         if True:
             returnVal = self._allocateFareWithUtility_Ret(
-                origin, destination, time, self._fareUtility2)
+                origin, destination, time, self._fareUtility1)
         if False:
             pass
         return returnVal
