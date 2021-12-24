@@ -4,6 +4,8 @@ import numpy as np
 import heapq
 import bisect
 
+from numpy.random.mtrand import random
+
 # a data container object for the taxi's internal list of fares. This
 # tells the taxi what fares are available to what destinations at
 # what price, and whether they have been bid upon or allocated. The
@@ -131,7 +133,9 @@ class Taxi:
         streetIDs = set(value for value in self._streetMap.values())
         for streetID in streetIDs:
             self._streetFareCount[streetID] = 0
-        a = 1
+        # lastKnownTaxiCount is used to keep track of whether to recompute K-centres.
+        self._lastKnownTaxiCount = 0
+        self._kCentres = []
 
     # This property allows the dispatcher to query the taxi's location directly. It's like having a GPS transponder
     # in each taxi.
@@ -207,24 +211,31 @@ class Taxi:
         # automatically go off duty if we have absorbed as much loss as we can in a day
 
         # Getting probabilistic - update the traffic history map.
-        # for part 1C
-        # commented out when not necessary
-        # for node in self._map:
+        # for part 1C (commented out when not necessary)
         # Do not worry about maxTraffic / Gridlock here - the path planner can do gridlock checks.
-        # self._trafficHistory[node].append(world._net[node].traffic)
+        # for node in self._map:
+        #    self._trafficHistory[node].append(world._net[node].traffic)
 
+        # Tangential to part 3: build a k-centres list if necessary.
+        taxisOut = sum(
+            1 if taxi[0].onDuty else 0 for taxi in world._taxis.items())
+        if taxisOut != self._lastKnownTaxiCount:
+            self._lastKnownTaxiCount = taxisOut
+            self._kCentres = self.kCentres(world, taxisOut)
+
+        # sum(1 if meets_condition(x) else 0 for x in my_list)
         if self._account == 0:
             # Only update bankruptcy time when taxi hits 0
             # this allows a fare to save a taxi from bankruptcy
             # but only if the fare payout gets account > 0 again.
             # Register bankruptcy before the fare is dropped off
-            self._timeAtBankruptcy = self._world.simTime
+            self._timeAtBankruptcy = world.simTime
 
         if self._account <= 0 and self._passenger is None:
             # print(
             #     "Loss too high. Taxi {0} is going off-duty".format(self.number))
             self.onDuty = False
-            self._offDutyTime = self._world.simTime
+            self._offDutyTime = world.simTime
         # have we reached our last known destination? Decide what to do now.
         if len(self._path) == 0:
             # obviously, if we have a fare aboard, we expect to have reached their destination,
@@ -268,7 +279,7 @@ class Taxi:
                     elif len(self._path) == 0:
                         self._path = self._planPath(self._loc.index, origin)
                 # get rid of any unallocated fares that are too stale to be likely customers
-                elif self._world.simTime-fare[0][0] > self._maxFareWait:
+                elif world.simTime-fare[0][0] > self._maxFareWait:
                     faresToRemove.append(fare[0])
                 # may want to bid on available fares. This could be done at any point here, it
                 # doesn't need to be a particularly early or late decision amongst the things to do.
@@ -283,7 +294,7 @@ class Taxi:
                 origin = (fare[0][1], fare[0][2])
                 destination = fare[1].destination
                 if self._bidOnFare(fare[0][0], origin, destination, fare[1].price):
-                    self._world.transmitFareBid(origin, self)
+                    world.transmitFareBid(origin, self)
                     fare[1].bid = 1
                 else:
                     fare[1].bid = -1
@@ -296,6 +307,47 @@ class Taxi:
         # the end so that the last possible time tick isn't wasted e.g. if that was just enough time to
         # drop off a fare.
         self._account -= 1
+
+    # Calculate the ideal "idle" spots for all k taxis.
+    def kCentres(self, world, k):
+        # uses a modified Gon algorithm to find ourselves k centres to gravitate the taxis to.
+        # our variation: while calculating new centres, treat the map edges as an infinite wall of centres.
+        # https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8792058
+        # pick a random first centre
+        centres = [list(world._net.items())[
+            np.random.randint(len(world._net))][0]]
+        while len(centres) < k:
+            nextNodeToPick = -1  # will eventually be the index of the best node
+            biggestDistance = 0
+            for node in world._net:
+                if node not in centres:
+                    smallestDistance = math.inf
+                    for centroid in centres:
+                        # find the smallest distance from C[n...] to this node.
+                        # do this for every node, pick the maximal smallest distance
+                        distance = self._euclideanDistance(node, centroid)
+                        if distance < smallestDistance:
+                            smallestDistance = distance
+
+                    # also calculate the smallest edge distance
+                    topDistance = self._euclideanDistance((node[0], 0), node)
+                    bottomDistance = self._euclideanDistance(
+                        (node[0], 50), node)
+                    leftDistance = self._euclideanDistance((0, node[1]), node)
+                    rightDistance = self._euclideanDistance(
+                        (50, node[1]), node)
+                    edgeDistance = min(
+                        [topDistance, bottomDistance, leftDistance, rightDistance])
+                    if edgeDistance < smallestDistance:
+                        smallestDistance = edgeDistance
+
+                    if smallestDistance > biggestDistance:
+                        biggestDistance = smallestDistance
+                        nextNodeToPick = node
+
+            centres.append(nextNodeToPick)
+
+        return centres
 
     # called automatically by the taxi's world to update its position. If the taxi has indicated a
     # turn or that it is going straight through (i.e., it's not stopping here), drive will
