@@ -282,11 +282,24 @@ class Dispatcher:
          take into account other details.
       '''
     # TODO - improve costing
-    # TODO SM 2021-12-16: Add a global "surge" number, play around with it
+    # TODO SM 2021-12-16: Add a global "surge" number, play around with it?
     # The more taxis there are, the higher the competition is
     # Or just set all fares to $1,000
     # It will give the dispatcher a lot of money
     # But for real investiate minimaxing - maybe?
+
+    def _costFare_advanced(self, fare):
+        # cost fares with our traffic includer.
+        fareJourneyTime = -1
+        args = {'travelTime': []}
+        fareJourneyPath = self._taxis[0]._planPath(
+            fare.origin, fare.destination, **args)
+        fareJourneyTime = args['travelTime'][0]
+        # if the world is gridlocked, a flat fare applies.
+        if fareJourneyTime < 0:
+            returnVal = 150
+        returnVal = (25+fareJourneyTime)/0.9
+        return returnVal
 
     def _costFare(self, fare):
         timeToDestination = self._parent.travelTime(self._parent.getNode(fare.origin[0], fare.origin[1]),

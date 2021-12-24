@@ -328,7 +328,6 @@ class Taxi:
 
     # Calculate the ideal "idle" spots for all k taxis.
     def _calculateKCentres(self, world, k):
-        print("Recalculating k-centres)")
         # uses a modified Gon algorithm to find ourselves k centres to gravitate the taxis to.
         # our variation: while calculating new centres, treat the map edges as an infinite wall of centres.
         # https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8792058
@@ -459,8 +458,6 @@ class Taxi:
                     self._nextLoc = nextNode[0]
                     self._nextDirection = nextNode[1]
                     if self._nextLoc is not None:
-                        print("Taxi " + str(self.number) +
-                              " driving to k-centre " + str(self._kCentrePath[-1]))
                         self.drive((self._nextLoc, self._nextDirection))
 
         # Either get underway or move from an intermediate waypoint. Both of these could be

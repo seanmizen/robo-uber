@@ -46,7 +46,7 @@ if displayUI:
     # outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
     #                        'completedFares': 0, 'cancelledFares': 0, 'dispatcherRevenue': 0, 'taxiPaths': {}, 'historicPathLengths': [], 'timeAtBanktrupcy': {}, 'nodes': {}, 'calls': 0, 'steps': 0}
     outputValuesTemplate = {'time': [], 'fares': {}, 'taxis': {},
-                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0, 'nodes': {}, 'taxiPaths': {}, 'completedFares': 0, 'cancelledFares': 0}
+                            'dispatcherRevenue': 0, 'timeAtBanktrupcy': {}, 'calls': 0, 'steps': 0, 'nodes': {}, 'taxiPaths': {}, 'completedFares': 0, 'cancelledFares': 0, 'kCentres': {}}
 else:
     # Run a reduced outputValues template when batch running
     # this will tell runWorld to store fewer values and should increase speed.
@@ -392,8 +392,7 @@ if displayUI:
                     pass
 
                 # displaying k-centres
-                print(str(curTime))
-                if True:
+                if 'kCentres' in values:
                     displayPurple = (200, 0, 200)
                     for taxiIdx, taxi in enumerate(values['taxis'].items()):
                         if taxi[0] in values['kCentres']:
