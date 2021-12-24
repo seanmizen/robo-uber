@@ -36,9 +36,9 @@ displaySize = (1024, 768)
 displayUI = False
 # only used if displayUI == False:
 # begs the question: how many threads can python run, total?
-threadsToUse = 5
+threadsToUse = 1
 # only used if displayUI == True:
-timeSleep = 0.1
+timeSleep = 0.01
 
 world = worldselector.export()
 
@@ -318,7 +318,7 @@ if displayUI:
                                         round(meshSize[1]/2)),
                                        round(meshSize[0]/2), width)
                 # displaying traffic
-                if False:
+                if True:
                     displayRed = (200, 0, 0)
                     displayYellow = (200, 200, 0)
                     displayGreen = (0, 200, 0)
@@ -342,12 +342,24 @@ if displayUI:
                                                       if time[0] > curTime]))
                                       for fare in values['fares'].items()
                                       if sorted(list(fare[1].keys()))[-1] > curTime])
+                taxi0 = values['taxis'][100]
+                a = str(len(taxi0.items()))
+                b = str(sorted(list(taxi0.keys()))[-1])
+                c = str(curTime)
+
+                print(c + ": " + a + " - " + b)
 
                 taxisToRedraw = dict([(taxi[0], dict([(taxiPos[0], taxiPos[1])
                                                       for taxiPos in taxi[1].items()
                                                       if taxiPos[0] > curTime]))
                                       for taxi in values['taxis'].items()
                                       if sorted(list(taxi[1].keys()))[-1] > curTime])
+                ntdString = ""
+                noTaxisDrawn = len(taxisToRedraw) == 0
+                if noTaxisDrawn:
+                    ntdString == " !!!"
+
+                #print(c + ": " + a + " - " + b + ntdString)
 
                 # some taxis are on duty?
                 if len(taxisToRedraw) > 0:
@@ -515,8 +527,8 @@ else:
 
     def startThreads():
         for i, thread in enumerate(roboUberThreads):
-            threadsStarted[i] = True
             thread.start()
+            threadsStarted[i] = True
     # This is for show more than anything - start a separate thread to start our threads.
     # It's quite pretty when you see it run.
     a = threading.Thread(target=startThreads)
