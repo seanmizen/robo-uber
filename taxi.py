@@ -126,11 +126,12 @@ class Taxi:
         self._fareDensityRankings = []
         # streetmap for easy node / streedID lookups
         # streetFareCount is where we will store a count of each fare.
-        self._streetMap = self._generateStreetMap()
+        self._streetMap, self._streetAdjacencies = self._generateStreetMap()
         self._streetFareCount = {}
         streetIDs = set(value for value in self._streetMap.values())
         for streetID in streetIDs:
             self._streetFareCount[streetID] = 0
+        a = 1
 
     # This property allows the dispatcher to query the taxi's location directly. It's like having a GPS transponder
     # in each taxi.
@@ -248,6 +249,7 @@ class Taxi:
                 # is the fare's originx, and fare[0][2] is the fare's originy, which we can use to
                 # build the location tuple.
                 origin = (fare[0][1], fare[0][2])
+                destination = fare[1].destination
 
                 # much more intelligent things could be done here. This simply naively takes the first
                 # allocated fare we have and plans a basic path to get us from where we are to where
@@ -271,15 +273,23 @@ class Taxi:
                 # may want to bid on available fares. This could be done at any point here, it
                 # doesn't need to be a particularly early or late decision amongst the things to do.
                 elif fare[1].bid == 0:
-                    if self._bidOnFare(fare[0][0], origin, fare[1].destination, fare[1].price):
-                        self._world.transmitFareBid(origin, self)
-                        fare[1].bid = 1
-                    else:
-                        fare[1].bid = -1
+                    # register fares first, we will make a second pass through availableFares to make our bids.
+                    self._bidSystemRegisterFare(
+                        fare[0][0], origin, destination, fare[1].price)
             for expired in faresToRemove:
                 del self._availableFares[expired]
-        # may want to do something active whilst enroute - this simple default version does
-        # nothing, but that is probably not particularly 'intelligent' behaviour.
+            # second pass to now act on valid bids.
+            for fare in self._availableFares.items():
+                origin = (fare[0][1], fare[0][2])
+                destination = fare[1].destination
+                if self._bidOnFare(fare[0][0], origin, destination, fare[1].price):
+                    self._world.transmitFareBid(origin, self)
+                    fare[1].bid = 1
+                else:
+                    fare[1].bid = -1
+
+                # may want to do something active whilst enroute - this simple default version does
+                # nothing, but that is probably not particularly 'intelligent' behaviour.
         else:
             pass
         # the last thing to do is decrement the account - the fixed 'time penalty'. This is always done at
@@ -350,6 +360,8 @@ class Taxi:
             callTime = self._world.simTime
             self._availableFares[callTime, args['origin'][0], args['origin'][1]] = FareInfo(
                 args['destination'], args['price'])
+            # Add to the fare density map. This will not need to be removed.
+            self._streetFareCount[self._streetMap[args['origin']]] += 1
             return True
         # the dispatcher has approved our bid: mark the fare as ours
         elif msg == self.FARE_ALLOC:
@@ -631,15 +643,13 @@ class Taxi:
 
     def _generateStreetMap(self):
         # generateStreepMap is called once at the beginning of the simulation.
-        # the dictionary of node: street#
-        # there are 396 nodes, 58 streets. We will use the resulting dictionary (and the streets) to help categorise fare density zones.
+        # We will use the resulting dictionary of streets to help categorise fare density zones.
         def getNode(myTup):
+            # getNode: convert (dir, x, y) tuple into ((x, y), nodeObject) tuple
             return ((myTup[1], myTup[2]), self._world._net[(myTup[1], myTup[2])])
         # create dict of (location): streetID mappings - this will be how we group our fare densities.
+        nodeAdjacencies = {}
         origin = getNode((0, 0, 0))
-        # currentNode = origin[0]
-        # nextNode = ((origin[1].neighbours[0][1], origin[1].neighbours[0]
-        #            [2]), origin[1]._neighbours[origin[1].neighbours[0][0]])
         nextNode = getNode(origin[1].neighbours[0])
         explored = [origin[0]]
         streetID = 0
@@ -647,9 +657,11 @@ class Taxi:
         nodeStreetMap[origin[0]] = streetID
         streetsToStart = []
         while len(nodeStreetMap.keys()) < self._world.size:
+
             nodeStreetMap[nextNode[0]] = streetID
             explored.append(nextNode[0])
             if len(nextNode[1].neighbours) == 2:
+                # corridor node - continue down the street
                 neighbourSelected = False
                 for neighbour in nextNode[1].neighbours:
                     if (neighbour[1], neighbour[2]) not in explored:
@@ -666,23 +678,47 @@ class Taxi:
                 streetID += 1
                 pass
             else:
-                # neighbours > 2
+                if nextNode[0] not in nodeAdjacencies:
+                    nodeAdjacencies[nextNode[0]] = {}
+                # if here, implied neighbours > 2
                 streetID += 1
                 for neighbour in nextNode[1].neighbours:
+                    nodeAdjacencies[nextNode[0]][(
+                        neighbour[1], neighbour[2])] = None
                     if (neighbour[1], neighbour[2]) not in explored:
                         streetsToStart.append(neighbour)
                 if len(streetsToStart) > 0:
                     nextNode = getNode(streetsToStart.pop())
                 else:
                     break
-        return nodeStreetMap
+
+        streetAdjacencies = {}
+        streetIDs = set(value for value in nodeStreetMap.values())
+        for streetID in streetIDs:
+            streetAdjacencies[streetID] = []
+
+        for nodeAdjacency in nodeAdjacencies.items():
+            origin = nodeAdjacency[0]
+            originStreet = nodeStreetMap[origin]
+            for destination in nodeAdjacency[1].keys():
+                destStreet = nodeStreetMap[destination]
+                if originStreet != destStreet:
+                    streetAdjacencies[originStreet].append(destStreet)
+                    streetAdjacencies[destStreet].append(originStreet)
+
+        return (nodeStreetMap, streetAdjacencies)
 
     def _fareDensity(self, destination):
         # streetMap contains our street IDs indexed by node
         # streetFareCount is our count of total fares - TODO make this smarter!
+        # TODO turn this into a Naive Bayes model!
+        fareDensity = self._streetFareCount[self._streetMap[destination]]
+        for neighbourStreet in self._streetAdjacencies[self._streetMap[destination]]:
+            fareDensity += self._streetFareCount[neighbourStreet]/2
+
         return self._streetFareCount[self._streetMap[destination]]
 
-    def _bidSystem1(self, time, origin, destination, price):
+    def _bidSystemRegisterFare(self, time, origin, destination, price):
         fareUtility = self._fareUtility1(
             time, origin, destination, price)
         fareDensity = self._fareDensity(destination)
@@ -691,10 +727,15 @@ class Taxi:
         bisect.insort(self._fareDensityRankings,
                       (fareDensity, (origin, destination)))
 
-        utilityRank = self._fareUtilityRankings.index(
-            (fareUtility, (origin, destination)))
-        densityRank = self._fareDensityRankings.index(
-            (fareDensity, (origin, destination)))
+    def _bidSystem1(self, time, origin, destination, price):
+        try:
+            utilityRank = [i for i, fareDetail in enumerate(
+                self._fareUtilityRankings) if fareDetail[1] == (origin, destination)][0]
+            densityRank = [i for i, fareDetail in enumerate(
+                self._fareDensityRankings) if fareDetail[1] == (origin, destination)][0]
+        except:
+            # fare doesn't exist anymore
+            return False
 
         # If utilityRank is higher than densityRank, we know this fare will be prioritised
         # by the dispatcher even though we don't want it to be prioritised. Block its bid.
@@ -713,9 +754,9 @@ class Taxi:
     # a hint that maybe some form of CSP solver with automated reasoning might be a good way of implementing this. But
     # other methodologies could work well. For best results you will almost certainly need to use probabilistic reasoning.
 
-    def _bidOnFare(self, time, origin, destination, price):
+    def _bidOnFare_new(self, time, origin, destination, price):
 
-        # bidSystem1: "Is this fare's FU ranking worse than it's FD ranking? If so, accept it."
+        # bidSystem1: "Is this fare's FU ranking equal or worse than it's FD ranking? If so, accept it."
         bidSystemAccepted = self._bidSystem1(time, origin, destination, price)
 
         NoCurrentPassengers = self._passenger is None
@@ -742,7 +783,7 @@ class Taxi:
         Bid = Bid and bidSystemAccepted
         return Bid
 
-    def _bidOnFare_Original(self, time, origin, destination, price):
+    def _bidOnFare(self, time, origin, destination, price):
         NoCurrentPassengers = self._passenger is None
         NoAllocatedFares = len(
             [fare for fare in self._availableFares.values() if fare.allocated]) == 0
